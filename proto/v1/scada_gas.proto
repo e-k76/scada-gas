@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package scada.v1;
+
+option go_package = "github.com/example/scada-gas/gen/scada/v1;scadav1";
+
+// DataQuality describes the trustworthiness of a tag value.
+enum DataQuality {
+  QUALITY_UNKNOWN = 0;
+  QUALITY_GOOD = 1;
+  QUALITY_BAD_COMM_FAILURE = 2;
+  QUALITY_BAD_SENSOR_FAULT = 3;
+  QUALITY_BAD_OUT_OF_RANGE = 4;
+  QUALITY_MANUAL_OVERRIDE = 5;
+}
+
+// AnalogTagValue carries one scaled analog measurement.
+message AnalogTagValue {
+  string tag_id = 1;            // e.g. TEH_CGS_01_P_IN
+  double value = 2;             // calibrated engineering value
+  double raw_value = 3;         // raw ADC register integer
+  string engineering_unit = 4;  // e.g. PSI, Bar, °C
+  DataQuality quality = 5;
+  int64 timestamp_utc_ms = 6;
+}
+
+// DigitalTagValue carries one boolean status / alarm point.
+message DigitalTagValue {
+  string tag_id = 1;  // e.g. TEH_CGS_01_LEAK
+  bool state = 2;
+  DataQuality quality = 3;
+  int64 timestamp_utc_ms = 4;
+  bool is_soe = 5;    // true when this update is a Sequence-of-Events state change
+}
+
+// TelemetryStreamUpdate is one polling-cycle batch sent by a FEP.
+message TelemetryStreamUpdate {
+  string source_fep_id = 1;
+  int64 packet_sequence = 2;
+  repeated AnalogTagValue analog_updates = 3;
+  repeated DigitalTagValue digital_updates = 4;
+}
+
+// StreamAck is returned by the core when the telemetry stream ends.
+message StreamAck {
+  int64 last_processed_sequence = 1;
+  bool is_healthy = 2;
+}
+
+service ScadaFepCoreService {
+  rpc StreamTelemetry(stream TelemetryStreamUpdate) returns (StreamAck);
+}
