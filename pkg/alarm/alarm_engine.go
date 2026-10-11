@@ -438,9 +438,17 @@ func DefaultRules(e *Engine, station string) error {
 			return err
 		}
 	}
-	return e.AddDigitalRule(DigitalRule{
+	if err := e.AddDigitalRule(DigitalRule{
 		TagID: station + "_LEAK", AlarmSuffix: "ALM", ActiveState: true,
 		Severity: scadav1.AlarmSeverity_SEVERITY_CRITICAL,
 		Message:  "Gas leak detected at " + station,
+	}); err != nil {
+		return err
+	}
+	// The slam-shut tag is true while armed (open); false means it has tripped.
+	return e.AddDigitalRule(DigitalRule{
+		TagID: station + "_SLAM_SHUT", AlarmSuffix: "TRIP", ActiveState: false,
+		Severity: scadav1.AlarmSeverity_SEVERITY_HIGH,
+		Message:  "Slam-shut valve tripped at " + station,
 	})
 }

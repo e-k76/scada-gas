@@ -7,6 +7,9 @@
 //	Holding register 1: P_OUT (~60.0 PSI)
 //	Holding register 2: TEMP  (~15.0 °C)
 //	Coil / discrete input 0: LEAK alarm
+//	Discrete input 1: INLET_VLV    (true = open)
+//	Discrete input 2: SLAM_SHUT    (true = armed/open, false = tripped/closed)
+//	Discrete input 3: OUTLET_VLV   (true = open)
 package main
 
 import (
@@ -25,7 +28,7 @@ import (
 
 const (
 	numHolding = 3
-	numBits    = 1
+	numBits    = 4
 )
 
 // station holds the simulated process state behind a mutex.
@@ -33,6 +36,15 @@ type station struct {
 	mu      sync.RWMutex
 	holding [numHolding]uint16
 	leak    bool
+	inlet   bool    // inlet isolation valve open
+	slam    bool    // slam-shut armed (open); false after a trip
+	outlet  bool    // outlet isolation valve open
+	rate    float64 // multiplier for how often events (leak, trips, valve operations) start
+}
+
+// bits returns the discrete-input image. Caller holds s.mu.
+func (s *station) bits() [numBits]bool {
+	return [numBits]bool{s.leak, s.inlet, s.slam, s.outlet}
 }
 
 func (s *station) HandleCoils(req *mb.CoilsRequest) ([]bool, error) {
@@ -44,7 +56,8 @@ func (s *station) HandleCoils(req *mb.CoilsRequest) ([]bool, error) {
 	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return []bool{s.leak}[req.Addr : int(req.Addr)+int(req.Quantity)], nil
+	b := s.bits()
+	return append([]bool(nil), b[req.Addr:int(req.Addr)+int(req.Quantity)]...), nil
 }
 
 func (s *station) HandleDiscreteInputs(req *mb.DiscreteInputsRequest) ([]bool, error) {
@@ -53,7 +66,8 @@ func (s *station) HandleDiscreteInputs(req *mb.DiscreteInputsRequest) ([]bool, e
 	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return []bool{s.leak}[req.Addr : int(req.Addr)+int(req.Quantity)], nil
+	b := s.bits()
+	return append([]bool(nil), b[req.Addr:int(req.Addr)+int(req.Quantity)]...), nil
 }
 
 func (s *station) HandleHoldingRegisters(req *mb.HoldingRegistersRequest) ([]uint16, error) {
@@ -94,18 +108,40 @@ func (s *station) step(t float64, rng *rand.Rand) {
 			s.leak = false
 			log.Printf("[SIM] LEAK alarm cleared")
 		}
-	} else if rng.Float64() < 0.01 {
+	} else if rng.Float64() < 0.01*s.rate {
 		s.leak = true
 		log.Printf("[SIM] LEAK alarm raised")
+	}
+
+	// Slam-shut: trips now and then and is re-armed by the "operator" after a few seconds.
+	if s.slam {
+		if rng.Float64() < 0.006*s.rate {
+			s.slam = false
+			log.Printf("[SIM] SLAM-SHUT tripped")
+		}
+	} else if rng.Float64() < 0.07 {
+		s.slam = true
+		log.Printf("[SIM] SLAM-SHUT re-armed")
+	}
+	// Isolation valves are operated very rarely, to give the live view something to animate.
+	if s.outlet {
+		if rng.Float64() < 0.002*s.rate {
+			s.outlet = false
+			log.Printf("[SIM] OUTLET valve closed")
+		}
+	} else if rng.Float64() < 0.06 {
+		s.outlet = true
+		log.Printf("[SIM] OUTLET valve opened")
 	}
 }
 
 func main() {
 	addr := flag.String("listen", "0.0.0.0:1502", "Modbus TCP listen address")
 	interval := flag.Duration("interval", 500*time.Millisecond, "process update interval")
+	eventRate := flag.Float64("event-rate", 1, "multiplier for how often leaks, slam-shut trips and valve operations start (try 5-10 for demos)")
 	flag.Parse()
 
-	st := &station{}
+	st := &station{inlet: true, slam: true, outlet: true, rate: *eventRate}
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	st.step(0, rng)
 

@@ -1054,6 +1054,332 @@ func (x *GetCurrentTelemetryResponse) GetServerTimeUtcMs() int64 {
 	return 0
 }
 
+// RuntimeConfig is the part of a deployed station topology that runtime
+// processes (core, FEPs) act on: the set of SCADA tags the station uses.
+type RuntimeConfig struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	StationId       string                 `protobuf:"bytes,1,opt,name=station_id,json=stationId,proto3" json:"station_id,omitempty"`
+	Version         int64                  `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"` // topology version, increases with every save
+	DeployedBy      string                 `protobuf:"bytes,3,opt,name=deployed_by,json=deployedBy,proto3" json:"deployed_by,omitempty"`
+	DeployedAtUtcMs int64                  `protobuf:"varint,4,opt,name=deployed_at_utc_ms,json=deployedAtUtcMs,proto3" json:"deployed_at_utc_ms,omitempty"`
+	BoundTags       []string               `protobuf:"bytes,5,rep,name=bound_tags,json=boundTags,proto3" json:"bound_tags,omitempty"` // sorted, unique
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *RuntimeConfig) Reset() {
+	*x = RuntimeConfig{}
+	mi := &file_v1_scada_gas_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RuntimeConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RuntimeConfig) ProtoMessage() {}
+
+func (x *RuntimeConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_scada_gas_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RuntimeConfig.ProtoReflect.Descriptor instead.
+func (*RuntimeConfig) Descriptor() ([]byte, []int) {
+	return file_v1_scada_gas_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *RuntimeConfig) GetStationId() string {
+	if x != nil {
+		return x.StationId
+	}
+	return ""
+}
+
+func (x *RuntimeConfig) GetVersion() int64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *RuntimeConfig) GetDeployedBy() string {
+	if x != nil {
+		return x.DeployedBy
+	}
+	return ""
+}
+
+func (x *RuntimeConfig) GetDeployedAtUtcMs() int64 {
+	if x != nil {
+		return x.DeployedAtUtcMs
+	}
+	return 0
+}
+
+func (x *RuntimeConfig) GetBoundTags() []string {
+	if x != nil {
+		return x.BoundTags
+	}
+	return nil
+}
+
+type DeployTopologyRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	StationId      string                 `protobuf:"bytes,1,opt,name=station_id,json=stationId,proto3" json:"station_id,omitempty"`
+	Version        int64                  `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
+	DeployedBy     string                 `protobuf:"bytes,3,opt,name=deployed_by,json=deployedBy,proto3" json:"deployed_by,omitempty"`
+	BoundTags      []string               `protobuf:"bytes,4,rep,name=bound_tags,json=boundTags,proto3" json:"bound_tags,omitempty"`
+	ComponentCount int32                  `protobuf:"varint,5,opt,name=component_count,json=componentCount,proto3" json:"component_count,omitempty"`
+	PipelineCount  int32                  `protobuf:"varint,6,opt,name=pipeline_count,json=pipelineCount,proto3" json:"pipeline_count,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *DeployTopologyRequest) Reset() {
+	*x = DeployTopologyRequest{}
+	mi := &file_v1_scada_gas_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeployTopologyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeployTopologyRequest) ProtoMessage() {}
+
+func (x *DeployTopologyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_scada_gas_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeployTopologyRequest.ProtoReflect.Descriptor instead.
+func (*DeployTopologyRequest) Descriptor() ([]byte, []int) {
+	return file_v1_scada_gas_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *DeployTopologyRequest) GetStationId() string {
+	if x != nil {
+		return x.StationId
+	}
+	return ""
+}
+
+func (x *DeployTopologyRequest) GetVersion() int64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *DeployTopologyRequest) GetDeployedBy() string {
+	if x != nil {
+		return x.DeployedBy
+	}
+	return ""
+}
+
+func (x *DeployTopologyRequest) GetBoundTags() []string {
+	if x != nil {
+		return x.BoundTags
+	}
+	return nil
+}
+
+func (x *DeployTopologyRequest) GetComponentCount() int32 {
+	if x != nil {
+		return x.ComponentCount
+	}
+	return 0
+}
+
+func (x *DeployTopologyRequest) GetPipelineCount() int32 {
+	if x != nil {
+		return x.PipelineCount
+	}
+	return 0
+}
+
+type DeployTopologyResponse struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Accepted            bool                   `protobuf:"varint,1,opt,name=accepted,proto3" json:"accepted,omitempty"`
+	Message             string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	Version             int64                  `protobuf:"varint,3,opt,name=version,proto3" json:"version,omitempty"`
+	LiveTags            []string               `protobuf:"bytes,4,rep,name=live_tags,json=liveTags,proto3" json:"live_tags,omitempty"`                                   // bound tags currently present in the RTDB
+	UnresolvedTags      []string               `protobuf:"bytes,5,rep,name=unresolved_tags,json=unresolvedTags,proto3" json:"unresolved_tags,omitempty"`                 // bound tags the core has not received yet
+	SubscribersNotified int32                  `protobuf:"varint,6,opt,name=subscribers_notified,json=subscribersNotified,proto3" json:"subscribers_notified,omitempty"` // FEPs / services listening for config changes
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *DeployTopologyResponse) Reset() {
+	*x = DeployTopologyResponse{}
+	mi := &file_v1_scada_gas_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeployTopologyResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeployTopologyResponse) ProtoMessage() {}
+
+func (x *DeployTopologyResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_scada_gas_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeployTopologyResponse.ProtoReflect.Descriptor instead.
+func (*DeployTopologyResponse) Descriptor() ([]byte, []int) {
+	return file_v1_scada_gas_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *DeployTopologyResponse) GetAccepted() bool {
+	if x != nil {
+		return x.Accepted
+	}
+	return false
+}
+
+func (x *DeployTopologyResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *DeployTopologyResponse) GetVersion() int64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *DeployTopologyResponse) GetLiveTags() []string {
+	if x != nil {
+		return x.LiveTags
+	}
+	return nil
+}
+
+func (x *DeployTopologyResponse) GetUnresolvedTags() []string {
+	if x != nil {
+		return x.UnresolvedTags
+	}
+	return nil
+}
+
+func (x *DeployTopologyResponse) GetSubscribersNotified() int32 {
+	if x != nil {
+		return x.SubscribersNotified
+	}
+	return 0
+}
+
+type GetRuntimeConfigsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetRuntimeConfigsRequest) Reset() {
+	*x = GetRuntimeConfigsRequest{}
+	mi := &file_v1_scada_gas_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRuntimeConfigsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRuntimeConfigsRequest) ProtoMessage() {}
+
+func (x *GetRuntimeConfigsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_scada_gas_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRuntimeConfigsRequest.ProtoReflect.Descriptor instead.
+func (*GetRuntimeConfigsRequest) Descriptor() ([]byte, []int) {
+	return file_v1_scada_gas_proto_rawDescGZIP(), []int{16}
+}
+
+type GetRuntimeConfigsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Configs       []*RuntimeConfig       `protobuf:"bytes,1,rep,name=configs,proto3" json:"configs,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetRuntimeConfigsResponse) Reset() {
+	*x = GetRuntimeConfigsResponse{}
+	mi := &file_v1_scada_gas_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetRuntimeConfigsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetRuntimeConfigsResponse) ProtoMessage() {}
+
+func (x *GetRuntimeConfigsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_scada_gas_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetRuntimeConfigsResponse.ProtoReflect.Descriptor instead.
+func (*GetRuntimeConfigsResponse) Descriptor() ([]byte, []int) {
+	return file_v1_scada_gas_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *GetRuntimeConfigsResponse) GetConfigs() []*RuntimeConfig {
+	if x != nil {
+		return x.Configs
+	}
+	return nil
+}
+
 var File_v1_scada_gas_proto protoreflect.FileDescriptor
 
 const file_v1_scada_gas_proto_rawDesc = "" +
@@ -1125,7 +1451,36 @@ const file_v1_scada_gas_proto_rawDesc = "" +
 	"\x1aGetCurrentTelemetryRequest\"u\n" +
 	"\x1bGetCurrentTelemetryResponse\x12)\n" +
 	"\x04tags\x18\x01 \x03(\v2\x15.scada.v1.TagSnapshotR\x04tags\x12+\n" +
-	"\x12server_time_utc_ms\x18\x02 \x01(\x03R\x0fserverTimeUtcMs*\xab\x01\n" +
+	"\x12server_time_utc_ms\x18\x02 \x01(\x03R\x0fserverTimeUtcMs\"\xb5\x01\n" +
+	"\rRuntimeConfig\x12\x1d\n" +
+	"\n" +
+	"station_id\x18\x01 \x01(\tR\tstationId\x12\x18\n" +
+	"\aversion\x18\x02 \x01(\x03R\aversion\x12\x1f\n" +
+	"\vdeployed_by\x18\x03 \x01(\tR\n" +
+	"deployedBy\x12+\n" +
+	"\x12deployed_at_utc_ms\x18\x04 \x01(\x03R\x0fdeployedAtUtcMs\x12\x1d\n" +
+	"\n" +
+	"bound_tags\x18\x05 \x03(\tR\tboundTags\"\xe0\x01\n" +
+	"\x15DeployTopologyRequest\x12\x1d\n" +
+	"\n" +
+	"station_id\x18\x01 \x01(\tR\tstationId\x12\x18\n" +
+	"\aversion\x18\x02 \x01(\x03R\aversion\x12\x1f\n" +
+	"\vdeployed_by\x18\x03 \x01(\tR\n" +
+	"deployedBy\x12\x1d\n" +
+	"\n" +
+	"bound_tags\x18\x04 \x03(\tR\tboundTags\x12'\n" +
+	"\x0fcomponent_count\x18\x05 \x01(\x05R\x0ecomponentCount\x12%\n" +
+	"\x0epipeline_count\x18\x06 \x01(\x05R\rpipelineCount\"\xe1\x01\n" +
+	"\x16DeployTopologyResponse\x12\x1a\n" +
+	"\baccepted\x18\x01 \x01(\bR\baccepted\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12\x18\n" +
+	"\aversion\x18\x03 \x01(\x03R\aversion\x12\x1b\n" +
+	"\tlive_tags\x18\x04 \x03(\tR\bliveTags\x12'\n" +
+	"\x0funresolved_tags\x18\x05 \x03(\tR\x0eunresolvedTags\x121\n" +
+	"\x14subscribers_notified\x18\x06 \x01(\x05R\x13subscribersNotified\"\x1a\n" +
+	"\x18GetRuntimeConfigsRequest\"N\n" +
+	"\x19GetRuntimeConfigsResponse\x121\n" +
+	"\aconfigs\x18\x01 \x03(\v2\x17.scada.v1.RuntimeConfigR\aconfigs*\xab\x01\n" +
 	"\vDataQuality\x12\x13\n" +
 	"\x0fQUALITY_UNKNOWN\x10\x00\x12\x10\n" +
 	"\fQUALITY_GOOD\x10\x01\x12\x1c\n" +
@@ -1153,7 +1508,11 @@ const file_v1_scada_gas_proto_rawDesc = "" +
 	"\x14SubscribeAlarmEvents\x12\x1a.scada.v1.SubscribeRequest\x1a\x14.scada.v1.AlarmEvent0\x012\xcb\x01\n" +
 	"\x10ScadaDataService\x12S\n" +
 	"\x12SubscribeTelemetry\x12\x1a.scada.v1.SubscribeRequest\x1a\x1f.scada.v1.TelemetryStreamUpdate0\x01\x12b\n" +
-	"\x13GetCurrentTelemetry\x12$.scada.v1.GetCurrentTelemetryRequest\x1a%.scada.v1.GetCurrentTelemetryResponseB3Z1github.com/example/scada-gas/gen/scada/v1;scadav1b\x06proto3"
+	"\x13GetCurrentTelemetry\x12$.scada.v1.GetCurrentTelemetryRequest\x1a%.scada.v1.GetCurrentTelemetryResponse2\x91\x02\n" +
+	"\x12ScadaConfigService\x12S\n" +
+	"\x0eDeployTopology\x12\x1f.scada.v1.DeployTopologyRequest\x1a .scada.v1.DeployTopologyResponse\x12\\\n" +
+	"\x11GetRuntimeConfigs\x12\".scada.v1.GetRuntimeConfigsRequest\x1a#.scada.v1.GetRuntimeConfigsResponse\x12H\n" +
+	"\x0fSubscribeConfig\x12\x1a.scada.v1.SubscribeRequest\x1a\x17.scada.v1.RuntimeConfig0\x01B3Z1github.com/example/scada-gas/gen/scada/v1;scadav1b\x06proto3"
 
 var (
 	file_v1_scada_gas_proto_rawDescOnce sync.Once
@@ -1168,7 +1527,7 @@ func file_v1_scada_gas_proto_rawDescGZIP() []byte {
 }
 
 var file_v1_scada_gas_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_v1_scada_gas_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_v1_scada_gas_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_v1_scada_gas_proto_goTypes = []any{
 	(DataQuality)(0),                    // 0: scada.v1.DataQuality
 	(AlarmSeverity)(0),                  // 1: scada.v1.AlarmSeverity
@@ -1186,6 +1545,11 @@ var file_v1_scada_gas_proto_goTypes = []any{
 	(*TagSnapshot)(nil),                 // 13: scada.v1.TagSnapshot
 	(*GetCurrentTelemetryRequest)(nil),  // 14: scada.v1.GetCurrentTelemetryRequest
 	(*GetCurrentTelemetryResponse)(nil), // 15: scada.v1.GetCurrentTelemetryResponse
+	(*RuntimeConfig)(nil),               // 16: scada.v1.RuntimeConfig
+	(*DeployTopologyRequest)(nil),       // 17: scada.v1.DeployTopologyRequest
+	(*DeployTopologyResponse)(nil),      // 18: scada.v1.DeployTopologyResponse
+	(*GetRuntimeConfigsRequest)(nil),    // 19: scada.v1.GetRuntimeConfigsRequest
+	(*GetRuntimeConfigsResponse)(nil),   // 20: scada.v1.GetRuntimeConfigsResponse
 }
 var file_v1_scada_gas_proto_depIdxs = []int32{
 	0,  // 0: scada.v1.AnalogTagValue.quality:type_name -> scada.v1.DataQuality
@@ -1199,23 +1563,30 @@ var file_v1_scada_gas_proto_depIdxs = []int32{
 	7,  // 8: scada.v1.GetActiveAlarmsResponse.alarms:type_name -> scada.v1.AlarmEvent
 	0,  // 9: scada.v1.TagSnapshot.quality:type_name -> scada.v1.DataQuality
 	13, // 10: scada.v1.GetCurrentTelemetryResponse.tags:type_name -> scada.v1.TagSnapshot
-	5,  // 11: scada.v1.ScadaFepCoreService.StreamTelemetry:input_type -> scada.v1.TelemetryStreamUpdate
-	8,  // 12: scada.v1.ScadaAlarmService.AcknowledgeAlarm:input_type -> scada.v1.AckAlarmRequest
-	10, // 13: scada.v1.ScadaAlarmService.GetActiveAlarms:input_type -> scada.v1.GetActiveAlarmsRequest
-	12, // 14: scada.v1.ScadaAlarmService.SubscribeAlarmEvents:input_type -> scada.v1.SubscribeRequest
-	12, // 15: scada.v1.ScadaDataService.SubscribeTelemetry:input_type -> scada.v1.SubscribeRequest
-	14, // 16: scada.v1.ScadaDataService.GetCurrentTelemetry:input_type -> scada.v1.GetCurrentTelemetryRequest
-	6,  // 17: scada.v1.ScadaFepCoreService.StreamTelemetry:output_type -> scada.v1.StreamAck
-	9,  // 18: scada.v1.ScadaAlarmService.AcknowledgeAlarm:output_type -> scada.v1.AckAlarmResponse
-	11, // 19: scada.v1.ScadaAlarmService.GetActiveAlarms:output_type -> scada.v1.GetActiveAlarmsResponse
-	7,  // 20: scada.v1.ScadaAlarmService.SubscribeAlarmEvents:output_type -> scada.v1.AlarmEvent
-	5,  // 21: scada.v1.ScadaDataService.SubscribeTelemetry:output_type -> scada.v1.TelemetryStreamUpdate
-	15, // 22: scada.v1.ScadaDataService.GetCurrentTelemetry:output_type -> scada.v1.GetCurrentTelemetryResponse
-	17, // [17:23] is the sub-list for method output_type
-	11, // [11:17] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	16, // 11: scada.v1.GetRuntimeConfigsResponse.configs:type_name -> scada.v1.RuntimeConfig
+	5,  // 12: scada.v1.ScadaFepCoreService.StreamTelemetry:input_type -> scada.v1.TelemetryStreamUpdate
+	8,  // 13: scada.v1.ScadaAlarmService.AcknowledgeAlarm:input_type -> scada.v1.AckAlarmRequest
+	10, // 14: scada.v1.ScadaAlarmService.GetActiveAlarms:input_type -> scada.v1.GetActiveAlarmsRequest
+	12, // 15: scada.v1.ScadaAlarmService.SubscribeAlarmEvents:input_type -> scada.v1.SubscribeRequest
+	12, // 16: scada.v1.ScadaDataService.SubscribeTelemetry:input_type -> scada.v1.SubscribeRequest
+	14, // 17: scada.v1.ScadaDataService.GetCurrentTelemetry:input_type -> scada.v1.GetCurrentTelemetryRequest
+	17, // 18: scada.v1.ScadaConfigService.DeployTopology:input_type -> scada.v1.DeployTopologyRequest
+	19, // 19: scada.v1.ScadaConfigService.GetRuntimeConfigs:input_type -> scada.v1.GetRuntimeConfigsRequest
+	12, // 20: scada.v1.ScadaConfigService.SubscribeConfig:input_type -> scada.v1.SubscribeRequest
+	6,  // 21: scada.v1.ScadaFepCoreService.StreamTelemetry:output_type -> scada.v1.StreamAck
+	9,  // 22: scada.v1.ScadaAlarmService.AcknowledgeAlarm:output_type -> scada.v1.AckAlarmResponse
+	11, // 23: scada.v1.ScadaAlarmService.GetActiveAlarms:output_type -> scada.v1.GetActiveAlarmsResponse
+	7,  // 24: scada.v1.ScadaAlarmService.SubscribeAlarmEvents:output_type -> scada.v1.AlarmEvent
+	5,  // 25: scada.v1.ScadaDataService.SubscribeTelemetry:output_type -> scada.v1.TelemetryStreamUpdate
+	15, // 26: scada.v1.ScadaDataService.GetCurrentTelemetry:output_type -> scada.v1.GetCurrentTelemetryResponse
+	18, // 27: scada.v1.ScadaConfigService.DeployTopology:output_type -> scada.v1.DeployTopologyResponse
+	20, // 28: scada.v1.ScadaConfigService.GetRuntimeConfigs:output_type -> scada.v1.GetRuntimeConfigsResponse
+	16, // 29: scada.v1.ScadaConfigService.SubscribeConfig:output_type -> scada.v1.RuntimeConfig
+	21, // [21:30] is the sub-list for method output_type
+	12, // [12:21] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_v1_scada_gas_proto_init() }
@@ -1229,9 +1600,9 @@ func file_v1_scada_gas_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_scada_gas_proto_rawDesc), len(file_v1_scada_gas_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   13,
+			NumMessages:   18,
 			NumExtensions: 0,
-			NumServices:   3,
+			NumServices:   4,
 		},
 		GoTypes:           file_v1_scada_gas_proto_goTypes,
 		DependencyIndexes: file_v1_scada_gas_proto_depIdxs,

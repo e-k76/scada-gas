@@ -20,6 +20,7 @@ type Core interface {
 type GRPCCore struct {
 	data   scadav1.ScadaDataServiceClient
 	alarms scadav1.ScadaAlarmServiceClient
+	config scadav1.ScadaConfigServiceClient
 }
 
 // NewGRPCCore wraps an established (or lazily connecting) client connection.
@@ -27,6 +28,7 @@ func NewGRPCCore(conn grpc.ClientConnInterface) *GRPCCore {
 	return &GRPCCore{
 		data:   scadav1.NewScadaDataServiceClient(conn),
 		alarms: scadav1.NewScadaAlarmServiceClient(conn),
+		config: scadav1.NewScadaConfigServiceClient(conn),
 	}
 }
 
@@ -48,4 +50,18 @@ func (c *GRPCCore) ActiveAlarms(ctx context.Context, tagID string, minSeverity s
 
 func (c *GRPCCore) Acknowledge(ctx context.Context, alarmID, user string) (*scadav1.AckAlarmResponse, error) {
 	return c.alarms.AcknowledgeAlarm(ctx, &scadav1.AckAlarmRequest{AlarmId: alarmID, User: user})
+}
+
+// DeployTopology publishes a topology's runtime configuration to the core.
+func (c *GRPCCore) DeployTopology(ctx context.Context, req *scadav1.DeployTopologyRequest) (*scadav1.DeployTopologyResponse, error) {
+	return c.config.DeployTopology(ctx, req)
+}
+
+// RuntimeConfigs returns the configurations the core currently holds.
+func (c *GRPCCore) RuntimeConfigs(ctx context.Context) ([]*scadav1.RuntimeConfig, error) {
+	r, err := c.config.GetRuntimeConfigs(ctx, &scadav1.GetRuntimeConfigsRequest{})
+	if err != nil {
+		return nil, err
+	}
+	return r.GetConfigs(), nil
 }

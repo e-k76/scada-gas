@@ -148,3 +148,49 @@ service ScadaDataService {
   // Snapshot of every tag currently held in the core RTDB.
   rpc GetCurrentTelemetry(GetCurrentTelemetryRequest) returns (GetCurrentTelemetryResponse);
 }
+
+// ---------------------------------------------------------------------------
+// Phase 4: runtime configuration deployed from the Engineering Studio
+// ---------------------------------------------------------------------------
+
+// RuntimeConfig is the part of a deployed station topology that runtime
+// processes (core, FEPs) act on: the set of SCADA tags the station uses.
+message RuntimeConfig {
+  string station_id = 1;
+  int64 version = 2;                 // topology version, increases with every save
+  string deployed_by = 3;
+  int64 deployed_at_utc_ms = 4;
+  repeated string bound_tags = 5;    // sorted, unique
+}
+
+message DeployTopologyRequest {
+  string station_id = 1;
+  int64 version = 2;
+  string deployed_by = 3;
+  repeated string bound_tags = 4;
+  int32 component_count = 5;
+  int32 pipeline_count = 6;
+}
+
+message DeployTopologyResponse {
+  bool accepted = 1;
+  string message = 2;
+  int64 version = 3;
+  repeated string live_tags = 4;        // bound tags currently present in the RTDB
+  repeated string unresolved_tags = 5;  // bound tags the core has not received yet
+  int32 subscribers_notified = 6;       // FEPs / services listening for config changes
+}
+
+message GetRuntimeConfigsRequest {}
+
+message GetRuntimeConfigsResponse {
+  repeated RuntimeConfig configs = 1;
+}
+
+service ScadaConfigService {
+  // Publishes a topology to the runtime without restarting anything.
+  rpc DeployTopology(DeployTopologyRequest) returns (DeployTopologyResponse);
+  rpc GetRuntimeConfigs(GetRuntimeConfigsRequest) returns (GetRuntimeConfigsResponse);
+  // Streams the current configs first, then every later deployment.
+  rpc SubscribeConfig(SubscribeRequest) returns (stream RuntimeConfig);
+}

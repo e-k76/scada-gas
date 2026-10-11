@@ -32,12 +32,13 @@ type TrendSource interface {
 
 // APIConfig configures the HTTP API.
 type APIConfig struct {
-	Core    Core
-	Trend   TrendSource // nil disables the trend endpoint (HTTP 503)
-	Hub     *Hub
-	Static  fs.FS  // dashboard files served at "/"; nil disables
-	Token   string // when set, /api/v1/* (except health) and /ws/* require it
-	Timeout time.Duration
+	Core     Core
+	Trend    TrendSource // nil disables the trend endpoint (HTTP 503)
+	Hub      *Hub
+	Topology *TopologyAPI // Engineering Studio endpoints; nil disables
+	Static   fs.FS        // dashboard files served at "/"; nil disables
+	Token    string       // when set, /api/v1/* (except health) and /ws/* require it
+	Timeout  time.Duration
 }
 
 // API serves the northbound REST endpoints and the WebSocket upgrade.
@@ -78,6 +79,9 @@ func (a *API) Handler() http.Handler {
 	mux.Handle("GET /api/v1/alarms/active", a.auth(http.HandlerFunc(a.handleAlarmsActive)))
 	mux.Handle("POST /api/v1/alarms/ack", a.auth(http.HandlerFunc(a.handleAlarmAck)))
 	mux.Handle("GET /api/v1/historian/trend", a.auth(http.HandlerFunc(a.handleTrend)))
+	if a.cfg.Topology != nil {
+		a.cfg.Topology.Register(mux, a.auth)
+	}
 	if a.cfg.Hub != nil {
 		mux.Handle("GET /ws/telemetry", a.auth(http.HandlerFunc(a.cfg.Hub.ServeWS)))
 	}

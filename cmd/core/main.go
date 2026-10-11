@@ -14,7 +14,10 @@ import (
 	"log"
 	"net"
 	"os/signal"
+	"regexp"
+	"sort"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -43,6 +46,10 @@ type core struct {
 	alarms    *bus.Broker[*scadav1.AlarmEvent]
 	logRTDB   bool
 	streams   atomic.Int64
+
+	cfgMu   sync.RWMutex
+	configs map[string]*scadav1.RuntimeConfig // deployed topology config per station
+	cfgBus  *bus.Broker[*scadav1.RuntimeConfig]
 }
 
 // --- FEP ingest service ----------------------------------------------------
@@ -231,6 +238,122 @@ func (s *dataService) SubscribeTelemetry(req *scadav1.SubscribeRequest, stream s
 	}
 }
 
+// --- runtime configuration service ------------------------------------------
+
+var (
+	stationIDPattern = regexp.MustCompile(`^[A-Za-z0-9_\-]{1,64}$`)
+	tagPattern       = regexp.MustCompile(`^[A-Za-z0-9_.:\-]{1,128}$`)
+)
+
+const maxBoundTags = 5000
+
+type configService struct {
+	scadav1.UnimplementedScadaConfigServiceServer
+	c *core
+}
+
+func (s *configService) DeployTopology(_ context.Context, req *scadav1.DeployTopologyRequest) (*scadav1.DeployTopologyResponse, error) {
+	if !stationIDPattern.MatchString(req.GetStationId()) {
+		return nil, status.Error(codes.InvalidArgument, "invalid station_id")
+	}
+	if req.GetVersion() < 1 {
+		return nil, status.Error(codes.InvalidArgument, "version must be >= 1")
+	}
+	if strings.TrimSpace(req.GetDeployedBy()) == "" {
+		return nil, status.Error(codes.InvalidArgument, "deployed_by is required")
+	}
+	if len(req.GetBoundTags()) > maxBoundTags {
+		return nil, status.Errorf(codes.InvalidArgument, "too many bound tags (max %d)", maxBoundTags)
+	}
+	seen := make(map[string]struct{}, len(req.GetBoundTags()))
+	tags := make([]string, 0, len(req.GetBoundTags()))
+	for _, t := range req.GetBoundTags() {
+		if !tagPattern.MatchString(t) {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid tag id %q", t)
+		}
+		if _, dup := seen[t]; !dup {
+			seen[t] = struct{}{}
+			tags = append(tags, t)
+		}
+	}
+	sort.Strings(tags)
+
+	c := s.c
+	c.cfgMu.Lock()
+	if cur := c.configs[req.GetStationId()]; cur != nil && req.GetVersion() < cur.GetVersion() {
+		c.cfgMu.Unlock()
+		return &scadav1.DeployTopologyResponse{
+			Accepted: false, Version: cur.GetVersion(),
+			Message: fmt.Sprintf("stale version %d: version %d is already deployed", req.GetVersion(), cur.GetVersion()),
+		}, nil
+	}
+	cfg := &scadav1.RuntimeConfig{
+		StationId: req.GetStationId(), Version: req.GetVersion(), DeployedBy: strings.TrimSpace(req.GetDeployedBy()),
+		DeployedAtUtcMs: time.Now().UTC().UnixMilli(), BoundTags: tags,
+	}
+	c.configs[cfg.StationId] = cfg
+	c.cfgMu.Unlock()
+
+	var live, unresolved []string
+	for _, t := range tags {
+		if _, ok := c.db.Get(t); ok {
+			live = append(live, t)
+		} else {
+			unresolved = append(unresolved, t)
+		}
+	}
+	notified := c.cfgBus.Subscribers()
+	c.cfgBus.Publish(cfg)
+	log.Printf("[CORE] topology %s v%d deployed by %s: %d components, %d pipelines, %d bound tags (%d live, %d unresolved), %d subscriber(s) notified",
+		cfg.StationId, cfg.Version, cfg.DeployedBy, req.GetComponentCount(), req.GetPipelineCount(), len(tags), len(live), len(unresolved), notified)
+	return &scadav1.DeployTopologyResponse{
+		Accepted: true, Message: "configuration applied", Version: cfg.Version,
+		LiveTags: live, UnresolvedTags: unresolved, SubscribersNotified: int32(notified),
+	}, nil
+}
+
+func (c *core) configSnapshot() []*scadav1.RuntimeConfig {
+	c.cfgMu.RLock()
+	defer c.cfgMu.RUnlock()
+	out := make([]*scadav1.RuntimeConfig, 0, len(c.configs))
+	for _, cfg := range c.configs {
+		out = append(out, cfg)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].StationId < out[j].StationId })
+	return out
+}
+
+func (s *configService) GetRuntimeConfigs(_ context.Context, _ *scadav1.GetRuntimeConfigsRequest) (*scadav1.GetRuntimeConfigsResponse, error) {
+	return &scadav1.GetRuntimeConfigsResponse{Configs: s.c.configSnapshot()}, nil
+}
+
+func (s *configService) SubscribeConfig(req *scadav1.SubscribeRequest, stream scadav1.ScadaConfigService_SubscribeConfigServer) error {
+	// Subscribe before reading the snapshot so a deployment in between is not lost;
+	// receiving one config twice is harmless because configs are versioned.
+	sub := s.c.cfgBus.Subscribe(64)
+	defer sub.Cancel()
+	log.Printf("[CORE] config subscriber %q connected", req.GetSubscriberId())
+	defer log.Printf("[CORE] config subscriber %q disconnected", req.GetSubscriberId())
+	for _, cfg := range s.c.configSnapshot() {
+		if err := stream.Send(cfg); err != nil {
+			return err
+		}
+	}
+	for {
+		select {
+		case <-stream.Context().Done():
+			return nil
+		case cfg, ok := <-sub.C:
+			if !ok {
+				return nil
+			}
+			if err := stream.Send(cfg); err != nil {
+				return err
+			}
+		}
+	}
+}
+
 func main() {
 	addr := flag.String("listen", "0.0.0.0:50051", "gRPC listen address")
 	station := flag.String("station", "TEH_CGS_01", "tag prefix used for the built-in alarm rules")
@@ -248,6 +371,8 @@ func main() {
 		telemetry: bus.New[*scadav1.TelemetryStreamUpdate](),
 		alarms:    bus.New[*scadav1.AlarmEvent](),
 		logRTDB:   *logRTDB,
+		configs:   make(map[string]*scadav1.RuntimeConfig),
+		cfgBus:    bus.New[*scadav1.RuntimeConfig](),
 	}
 	if err := alarm.DefaultRules(c.engine, *station); err != nil {
 		log.Fatalf("[CORE] alarm rules: %v", err)
@@ -261,6 +386,7 @@ func main() {
 	scadav1.RegisterScadaFepCoreServiceServer(gs, &fepService{c: c})
 	scadav1.RegisterScadaAlarmServiceServer(gs, &alarmService{c: c})
 	scadav1.RegisterScadaDataServiceServer(gs, &dataService{c: c})
+	scadav1.RegisterScadaConfigServiceServer(gs, &configService{c: c})
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()

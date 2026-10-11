@@ -47,6 +47,9 @@ func DefaultStationPoints(station string) ([]AnalogPoint, []DigitalPoint) {
 	}
 	digitals := []DigitalPoint{
 		{TagID: station + "_LEAK", Address: 0},
+		{TagID: station + "_INLET_VLV", Address: 1},  // true = open
+		{TagID: station + "_SLAM_SHUT", Address: 2},  // true = armed (open), false = tripped
+		{TagID: station + "_OUTLET_VLV", Address: 3}, // true = open
 	}
 	return analogs, digitals
 }

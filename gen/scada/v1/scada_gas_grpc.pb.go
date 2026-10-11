@@ -444,3 +444,189 @@ var ScadaDataService_ServiceDesc = grpc.ServiceDesc{
 	},
 	Metadata: "v1/scada_gas.proto",
 }
+
+const (
+	ScadaConfigService_DeployTopology_FullMethodName    = "/scada.v1.ScadaConfigService/DeployTopology"
+	ScadaConfigService_GetRuntimeConfigs_FullMethodName = "/scada.v1.ScadaConfigService/GetRuntimeConfigs"
+	ScadaConfigService_SubscribeConfig_FullMethodName   = "/scada.v1.ScadaConfigService/SubscribeConfig"
+)
+
+// ScadaConfigServiceClient is the client API for ScadaConfigService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type ScadaConfigServiceClient interface {
+	// Publishes a topology to the runtime without restarting anything.
+	DeployTopology(ctx context.Context, in *DeployTopologyRequest, opts ...grpc.CallOption) (*DeployTopologyResponse, error)
+	GetRuntimeConfigs(ctx context.Context, in *GetRuntimeConfigsRequest, opts ...grpc.CallOption) (*GetRuntimeConfigsResponse, error)
+	// Streams the current configs first, then every later deployment.
+	SubscribeConfig(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[RuntimeConfig], error)
+}
+
+type scadaConfigServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewScadaConfigServiceClient(cc grpc.ClientConnInterface) ScadaConfigServiceClient {
+	return &scadaConfigServiceClient{cc}
+}
+
+func (c *scadaConfigServiceClient) DeployTopology(ctx context.Context, in *DeployTopologyRequest, opts ...grpc.CallOption) (*DeployTopologyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeployTopologyResponse)
+	err := c.cc.Invoke(ctx, ScadaConfigService_DeployTopology_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *scadaConfigServiceClient) GetRuntimeConfigs(ctx context.Context, in *GetRuntimeConfigsRequest, opts ...grpc.CallOption) (*GetRuntimeConfigsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetRuntimeConfigsResponse)
+	err := c.cc.Invoke(ctx, ScadaConfigService_GetRuntimeConfigs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *scadaConfigServiceClient) SubscribeConfig(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[RuntimeConfig], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &ScadaConfigService_ServiceDesc.Streams[0], ScadaConfigService_SubscribeConfig_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[SubscribeRequest, RuntimeConfig]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type ScadaConfigService_SubscribeConfigClient = grpc.ServerStreamingClient[RuntimeConfig]
+
+// ScadaConfigServiceServer is the server API for ScadaConfigService service.
+// All implementations must embed UnimplementedScadaConfigServiceServer
+// for forward compatibility.
+type ScadaConfigServiceServer interface {
+	// Publishes a topology to the runtime without restarting anything.
+	DeployTopology(context.Context, *DeployTopologyRequest) (*DeployTopologyResponse, error)
+	GetRuntimeConfigs(context.Context, *GetRuntimeConfigsRequest) (*GetRuntimeConfigsResponse, error)
+	// Streams the current configs first, then every later deployment.
+	SubscribeConfig(*SubscribeRequest, grpc.ServerStreamingServer[RuntimeConfig]) error
+	mustEmbedUnimplementedScadaConfigServiceServer()
+}
+
+// UnimplementedScadaConfigServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedScadaConfigServiceServer struct{}
+
+func (UnimplementedScadaConfigServiceServer) DeployTopology(context.Context, *DeployTopologyRequest) (*DeployTopologyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeployTopology not implemented")
+}
+func (UnimplementedScadaConfigServiceServer) GetRuntimeConfigs(context.Context, *GetRuntimeConfigsRequest) (*GetRuntimeConfigsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetRuntimeConfigs not implemented")
+}
+func (UnimplementedScadaConfigServiceServer) SubscribeConfig(*SubscribeRequest, grpc.ServerStreamingServer[RuntimeConfig]) error {
+	return status.Error(codes.Unimplemented, "method SubscribeConfig not implemented")
+}
+func (UnimplementedScadaConfigServiceServer) mustEmbedUnimplementedScadaConfigServiceServer() {}
+func (UnimplementedScadaConfigServiceServer) testEmbeddedByValue()                            {}
+
+// UnsafeScadaConfigServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ScadaConfigServiceServer will
+// result in compilation errors.
+type UnsafeScadaConfigServiceServer interface {
+	mustEmbedUnimplementedScadaConfigServiceServer()
+}
+
+func RegisterScadaConfigServiceServer(s grpc.ServiceRegistrar, srv ScadaConfigServiceServer) {
+	// If the following call panics, it indicates UnimplementedScadaConfigServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&ScadaConfigService_ServiceDesc, srv)
+}
+
+func _ScadaConfigService_DeployTopology_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeployTopologyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ScadaConfigServiceServer).DeployTopology(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ScadaConfigService_DeployTopology_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ScadaConfigServiceServer).DeployTopology(ctx, req.(*DeployTopologyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ScadaConfigService_GetRuntimeConfigs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRuntimeConfigsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ScadaConfigServiceServer).GetRuntimeConfigs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ScadaConfigService_GetRuntimeConfigs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ScadaConfigServiceServer).GetRuntimeConfigs(ctx, req.(*GetRuntimeConfigsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ScadaConfigService_SubscribeConfig_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(SubscribeRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ScadaConfigServiceServer).SubscribeConfig(m, &grpc.GenericServerStream[SubscribeRequest, RuntimeConfig]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type ScadaConfigService_SubscribeConfigServer = grpc.ServerStreamingServer[RuntimeConfig]
+
+// ScadaConfigService_ServiceDesc is the grpc.ServiceDesc for ScadaConfigService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var ScadaConfigService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "scada.v1.ScadaConfigService",
+	HandlerType: (*ScadaConfigServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "DeployTopology",
+			Handler:    _ScadaConfigService_DeployTopology_Handler,
+		},
+		{
+			MethodName: "GetRuntimeConfigs",
+			Handler:    _ScadaConfigService_GetRuntimeConfigs_Handler,
+		},
+	},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "SubscribeConfig",
+			Handler:       _ScadaConfigService_SubscribeConfig_Handler,
+			ServerStreams: true,
+		},
+	},
+	Metadata: "v1/scada_gas.proto",
+}

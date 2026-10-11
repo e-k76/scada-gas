@@ -94,6 +94,7 @@
   <h1>Gas SCADA <small id="station">waiting for data…</small></h1>
   <span id="conn" class="badge offline"><span class="dot"></span><span id="conntxt">CONNECTING</span></span>
   <span class="spacer"></span>
+  <a href="/studio.html" id="studioLink" style="color:var(--accent);text-decoration:none;font-size:13px">Engineering Studio &rarr;</a>
   <label class="op">Operator <input type="text" id="user" maxlength="64" placeholder="your name" autocomplete="off"></label>
   <span class="badge" id="clock">--:--:--</span>
 </header>
@@ -140,6 +141,7 @@
   const params = new URLSearchParams(location.search);
   const TOKEN = params.get("token") || "";
   const $ = (id) => document.getElementById(id);
+  if (TOKEN) $("studioLink").href = "/studio.html?token=" + encodeURIComponent(TOKEN);
   const SEV = ["INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"];
   const SEV_CLASS = ["info", "low", "med", "high", "crit"];
   const SEV_COLOR = ["--info", "--low", "--med", "--high", "--crit"];

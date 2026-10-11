@@ -25,6 +25,7 @@ import (
 	"github.com/example/scada-gas/pkg/gateway"
 	"github.com/example/scada-gas/pkg/grpcutil"
 	"github.com/example/scada-gas/pkg/historian"
+	"github.com/example/scada-gas/pkg/topology"
 	"github.com/example/scada-gas/web"
 )
 
@@ -71,6 +72,20 @@ func main() {
 		log.Printf("[GW] no DSN: trend endpoint disabled")
 	}
 
+	var topoStore topology.Store
+	if *dsn != "" {
+		ts, err := topology.NewPGStore(ctx, *dsn)
+		if err != nil {
+			log.Fatalf("[GW] topology store: %v", err)
+		}
+		topoStore = ts
+	} else {
+		log.Printf("[GW] no DSN: topologies are kept in memory only and are lost on restart")
+		topoStore = topology.NewMemoryStore()
+	}
+	defer topoStore.Close()
+	topo := gateway.NewTopologyAPI(topoStore, core)
+
 	hcfg := gateway.DefaultHubConfig()
 	hcfg.MaxClients = *maxWS
 	for _, o := range strings.Split(*origins, ",") {
@@ -80,7 +95,7 @@ func main() {
 	}
 	hub := gateway.NewHub(hcfg, core)
 
-	api := gateway.NewAPI(gateway.APIConfig{Core: core, Trend: trend, Hub: hub, Static: web.FS, Token: *token})
+	api := gateway.NewAPI(gateway.APIConfig{Core: core, Trend: trend, Hub: hub, Topology: topo, Static: web.FS, Token: *token})
 	srv := &http.Server{
 		Addr:              *listen,
 		Handler:           api.Handler(),
@@ -121,6 +136,7 @@ func main() {
 			if err != nil {
 				return nil, err
 			}
+			go topo.Reconcile(ctx) // the core is reachable (again): make sure it has the deployed configs
 			return func() error {
 				ev, err := s.Recv()
 				if err != nil {

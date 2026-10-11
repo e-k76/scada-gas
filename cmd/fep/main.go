@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"sort"
 	"sync"
 	"syscall"
 	"time"
@@ -21,7 +22,85 @@ import (
 
 	scadav1 "github.com/example/scada-gas/gen/scada/v1"
 	mbdrv "github.com/example/scada-gas/pkg/driver/modbus"
+	"github.com/example/scada-gas/pkg/grpcutil"
 )
+
+// runtimeConfig tracks the topology configuration deployed from the Engineering
+// Studio and, when filtering is enabled, restricts the streamed tags to those
+// the deployed topology binds. It is hot-reloaded: no restart is needed.
+type runtimeConfig struct {
+	station string
+	filter  bool     // -config-filter: stream only bound tags once a config is active
+	local   []string // tag ids this FEP can poll
+
+	mu      sync.RWMutex
+	version int64
+	bound   map[string]struct{} // nil until a usable config was applied
+}
+
+// apply processes a deployed config and reports what it did.
+func (rc *runtimeConfig) apply(cfg *scadav1.RuntimeConfig) {
+	if cfg.GetStationId() != rc.station {
+		return // another station's configuration
+	}
+	set := make(map[string]struct{}, len(cfg.GetBoundTags()))
+	for _, t := range cfg.GetBoundTags() {
+		set[t] = struct{}{}
+	}
+	var matched, unbound []string
+	for _, t := range rc.local {
+		if _, ok := set[t]; ok {
+			matched = append(matched, t)
+		} else {
+			unbound = append(unbound, t)
+		}
+	}
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	if cfg.GetVersion() < rc.version {
+		return // older than what is already applied
+	}
+	if len(matched) == 0 {
+		log.Printf("[FEP] config %s v%d (by %s) binds none of this FEP's %d points - ignored",
+			cfg.GetStationId(), cfg.GetVersion(), cfg.GetDeployedBy(), len(rc.local))
+		return
+	}
+	rc.version = cfg.GetVersion()
+	rc.bound = set
+	sort.Strings(unbound)
+	mode := "informational (start the FEP with -config-filter to stream only bound tags)"
+	if rc.filter {
+		mode = "filtering active"
+	}
+	log.Printf("[FEP] config %s v%d applied (deployed by %s): %d of %d local points bound, %d unbound %v; %s",
+		cfg.GetStationId(), cfg.GetVersion(), cfg.GetDeployedBy(), len(matched), len(rc.local), len(unbound), unbound, mode)
+}
+
+// filterUpdates drops tags the deployed topology does not bind (filter mode only).
+func (rc *runtimeConfig) filterUpdates(a []*scadav1.AnalogTagValue, d []*scadav1.DigitalTagValue) ([]*scadav1.AnalogTagValue, []*scadav1.DigitalTagValue) {
+	if !rc.filter {
+		return a, d
+	}
+	rc.mu.RLock()
+	bound := rc.bound
+	rc.mu.RUnlock()
+	if bound == nil {
+		return a, d
+	}
+	fa := make([]*scadav1.AnalogTagValue, 0, len(a))
+	for _, v := range a {
+		if _, ok := bound[v.GetTagId()]; ok {
+			fa = append(fa, v)
+		}
+	}
+	fd := make([]*scadav1.DigitalTagValue, 0, len(d))
+	for _, v := range d {
+		if _, ok := bound[v.GetTagId()]; ok {
+			fd = append(fd, v)
+		}
+	}
+	return fa, fd
+}
 
 // buffer is a bounded FIFO that drops the oldest entry when full.
 type buffer struct {
@@ -74,7 +153,7 @@ func (b *buffer) stats() (int, uint64) {
 }
 
 // pollLoop polls the device every interval and enqueues one update per cycle.
-func pollLoop(ctx context.Context, drv *mbdrv.Driver, fepID string, interval time.Duration, buf *buffer) {
+func pollLoop(ctx context.Context, drv *mbdrv.Driver, fepID string, interval time.Duration, buf *buffer, rc *runtimeConfig) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	var seq int64
@@ -95,6 +174,7 @@ func pollLoop(ctx context.Context, drv *mbdrv.Driver, fepID string, interval tim
 			log.Printf("[FEP] device communication restored")
 			lastErr = ""
 		}
+		analogs, digitals = rc.filterUpdates(analogs, digitals)
 		seq++
 		buf.push(&scadav1.TelemetryStreamUpdate{
 			SourceFepId:    fepID,
@@ -194,6 +274,8 @@ func main() {
 	coreAddr := flag.String("core", "127.0.0.1:50051", "core gRPC address")
 	interval := flag.Duration("interval", 500*time.Millisecond, "polling interval")
 	bufSize := flag.Int("buffer", 7200, "max buffered updates while core is unreachable")
+	cfgSync := flag.Bool("config-sync", true, "subscribe to topology configurations deployed from the Engineering Studio")
+	cfgFilter := flag.Bool("config-filter", false, "stream only tags bound by the deployed topology (default: stream everything)")
 	flag.Parse()
 
 	analogs, digitals := mbdrv.DefaultStationPoints(*station)
@@ -226,12 +308,41 @@ func main() {
 	defer cancel()
 
 	buf := newBuffer(*bufSize)
+	local := make([]string, 0, len(analogs)+len(digitals))
+	for _, a := range analogs {
+		local = append(local, a.TagID)
+	}
+	for _, d := range digitals {
+		local = append(local, d.TagID)
+	}
+	rc := &runtimeConfig{station: *station, filter: *cfgFilter, local: local}
 	log.Printf("[FEP] %s polling %s every %s, streaming to %s", *fepID, *modbusAddr, *interval, *coreAddr)
 
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go func() { defer wg.Done(); pollLoop(ctx, drv, *fepID, *interval, buf) }()
+	go func() { defer wg.Done(); pollLoop(ctx, drv, *fepID, *interval, buf, rc) }()
 	go func() { defer wg.Done(); streamLoop(ctx, conn, buf) }()
+	if *cfgSync {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			cfgClient := scadav1.NewScadaConfigServiceClient(conn)
+			grpcutil.SubscribeLoop(ctx, "[FEP]", "config", func(c context.Context) (func() error, error) {
+				s, err := cfgClient.SubscribeConfig(c, &scadav1.SubscribeRequest{SubscriberId: *fepID})
+				if err != nil {
+					return nil, err
+				}
+				return func() error {
+					cfg, err := s.Recv()
+					if err != nil {
+						return err
+					}
+					rc.apply(cfg)
+					return nil
+				}, nil
+			})
+		}()
+	}
 
 	<-ctx.Done()
 	log.Printf("[FEP] shutting down")
