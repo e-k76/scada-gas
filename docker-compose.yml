@@ -13,6 +13,7 @@ services:
       - scada-pgdata:/var/lib/postgresql/data
       - ./deploy/timescaledb_init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
       - ./deploy/topology_init.sql:/docker-entrypoint-initdb.d/02_topology.sql:ro
+      - ./deploy/control_init.sql:/docker-entrypoint-initdb.d/03_control.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U scada -d scada"]
       interval: 5s

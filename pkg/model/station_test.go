@@ -25,7 +25,7 @@ func TestExampleStationIsValid(t *testing.T) {
 		t.Logf("example warning: %+v", i)
 	}
 	tags := ex.BoundTags()
-	want := []string{"TEH_CGS_01_INLET_VLV", "TEH_CGS_01_OUTLET_VLV", "TEH_CGS_01_P_IN", "TEH_CGS_01_P_OUT", "TEH_CGS_01_SLAM_SHUT", "TEH_CGS_01_TEMP"}
+	want := []string{"TEH_CGS_01_INLET_VLV", "TEH_CGS_01_OUTLET_VLV", "TEH_CGS_01_P_IN", "TEH_CGS_01_P_OUT", "TEH_CGS_01_P_OUT_SP", "TEH_CGS_01_SLAM_SHUT", "TEH_CGS_01_TEMP"}
 	if strings.Join(tags, ",") != strings.Join(want, ",") {
 		t.Fatalf("bound tags %v, want %v", tags, want)
 	}

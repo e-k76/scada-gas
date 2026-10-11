@@ -30,6 +30,7 @@ const maxTopologyBytes = 1 << 20
 //
 //	GET  /api/v1/topology                       list stations
 //	GET  /api/v1/topology/{station_id}          fetch the saved drawing
+//	                                            (?version=deployed: the drawing that is running)
 //	POST /api/v1/topology/{station_id}          save (create or update)
 //	POST /api/v1/topology/{station_id}/deploy   publish to the runtime
 //	GET  /api/v1/topology/{station_id}/example  a ready-made example drawing
@@ -45,14 +46,15 @@ func NewTopologyAPI(store topology.Store, deployer Deployer) *TopologyAPI {
 	return &TopologyAPI{store: store, deployer: deployer, timeout: 10 * time.Second}
 }
 
-// Register adds the routes to mux, wrapping them with wrap (authentication).
-func (t *TopologyAPI) Register(mux *http.ServeMux, wrap func(http.Handler) http.Handler) {
-	h := func(f http.HandlerFunc) http.Handler { return wrap(f) }
-	mux.Handle("GET /api/v1/topology", h(t.handleList))
-	mux.Handle("GET /api/v1/topology/{station_id}", h(t.handleGet))
-	mux.Handle("POST /api/v1/topology/{station_id}", h(t.handleSave))
-	mux.Handle("POST /api/v1/topology/{station_id}/deploy", h(t.handleDeploy))
-	mux.Handle("GET /api/v1/topology/{station_id}/example", h(t.handleExample))
+// Register adds the routes to mux. read wraps the read-only endpoints
+// (authentication), write the endpoints that change or deploy a topology
+// (authentication plus the engineer role).
+func (t *TopologyAPI) Register(mux *http.ServeMux, read, write func(http.Handler) http.Handler) {
+	mux.Handle("GET /api/v1/topology", read(http.HandlerFunc(t.handleList)))
+	mux.Handle("GET /api/v1/topology/{station_id}", read(http.HandlerFunc(t.handleGet)))
+	mux.Handle("POST /api/v1/topology/{station_id}", write(http.HandlerFunc(t.handleSave)))
+	mux.Handle("POST /api/v1/topology/{station_id}/deploy", write(http.HandlerFunc(t.handleDeploy)))
+	mux.Handle("GET /api/v1/topology/{station_id}/example", read(http.HandlerFunc(t.handleExample)))
 }
 
 // --- JSON shapes ---------------------------------------------------------------
@@ -163,8 +165,23 @@ func (t *TopologyAPI) handleGet(w http.ResponseWriter, r *http.Request) {
 		writeStoreError(w, err)
 		return
 	}
+	doc := rec.Document
+	if v := r.URL.Query().Get("version"); v != "" {
+		if v != "deployed" {
+			writeError(w, http.StatusBadRequest, `version must be "deployed" (or omitted for the latest saved drawing)`)
+			return
+		}
+		if rec.DeployedVersion == 0 {
+			writeError(w, http.StatusNotFound, "this station has never been deployed")
+			return
+		}
+		if doc, err = t.store.GetVersion(ctx, id, rec.DeployedVersion); err != nil {
+			writeStoreError(w, err)
+			return
+		}
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"topology": rec.Document, "status": statusOf(rec), "issues": rec.Document.Validate(),
+		"topology": doc, "status": statusOf(rec), "issues": doc.Validate(),
 	})
 }
 
@@ -202,6 +219,9 @@ func (t *TopologyAPI) handleSave(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	by := strings.TrimSpace(doc.UpdatedBy)
+	if p := PrincipalFrom(r.Context()); p.Named() {
+		by = p.User // the credentials decide the author, not the request body
+	}
 	if !validUser(by) {
 		writeError(w, http.StatusBadRequest, "updated_by is required (1-64 printable characters): enter your operator name")
 		return
@@ -232,6 +252,9 @@ func (t *TopologyAPI) handleDeploy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req.DeployedBy = strings.TrimSpace(req.DeployedBy)
+	if p := PrincipalFrom(r.Context()); p.Named() {
+		req.DeployedBy = p.User
+	}
 	if !validUser(req.DeployedBy) {
 		writeError(w, http.StatusBadRequest, "deployed_by is required (1-64 printable characters)")
 		return

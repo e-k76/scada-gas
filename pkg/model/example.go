@@ -12,7 +12,7 @@ func DefaultPressureBands() []PressureBand {
 
 // ExampleStation returns a complete city gate station drawing whose tags
 // follow the simulator's naming (<station>_P_IN, _P_OUT, _TEMP, _INLET_VLV,
-// _SLAM_SHUT, _OUTLET_VLV). It is valid and ready to save.
+// _SLAM_SHUT, _OUTLET_VLV, _P_OUT_SP). It is valid and ready to save.
 //
 // Layout (flow left to right, 20 px grid):
 //
@@ -46,7 +46,7 @@ func ExampleStation(stationID, name string) *StationTopology {
 			node("J_T", TypeJunction, 460, 300, 0, "", "", DisplaySettings{}),
 			node("TT_IN", TypeTemperatureTx, 460, 200, 0, s+"_TEMP", "", DisplaySettings{LabelPrefix: "T", Decimals: &dec1}),
 			node("SSV_01", TypeSlamShutValve, 540, 300, 0, "", s+"_SLAM_SHUT", DisplaySettings{Label: "Slam-shut"}),
-			node("REG_01", TypeRegulator, 680, 300, 0, s+"_P_OUT", "", DisplaySettings{Label: "Regulator", LabelPrefix: "SP", Decimals: &dec1}),
+			node("REG_01", TypeRegulator, 680, 300, 0, s+"_P_OUT_SP", "", DisplaySettings{Label: "Regulator", LabelPrefix: "SP", Decimals: &dec1}),
 			node("J_OUT", TypeJunction, 800, 300, 0, "", "", DisplaySettings{}),
 			node("PT_OUT", TypePressureTx, 800, 200, 0, s+"_P_OUT", "", DisplaySettings{LabelPrefix: "P-OUT", Decimals: &dec1}),
 			node("ODR_01", TypeOdorizer, 800, 380, 90, "", "", DisplaySettings{Label: "Odorizer"}),

@@ -5,12 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gas SCADA Dashboard</title>
 <link rel="icon" href="data:,">
+<link rel="stylesheet" href="/schematic.css">
 <style>
   :root {
     --bg: #0e1319; --panel: #151c24; --panel2: #1a232d; --border: #263140;
     --text: #e6edf3; --muted: #8a98a8; --accent: #58a6ff;
     --ok: #3fb950; --info: #58a6ff; --low: #d2c322; --med: #d29922; --high: #f0883e; --crit: #f85149;
     --bad: #6e7681; --radius: 10px;
+    --sym: #9fb3c8; --symbg: #1a232d; --pipe: #5b7083;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--text);
@@ -86,6 +88,49 @@
   #toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--panel2); border: 1px solid var(--border);
     padding: 9px 16px; border-radius: 8px; display: none; z-index: 5; max-width: 90vw; }
   #toast.err { border-color: var(--crit); }
+
+  /* ---- operator HMI ---- */
+  .hmi-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 8px; }
+  .hmi-head h2 { margin: 0; }
+  .hmi-head small { color: var(--muted); }
+  #hmiWrap { position: relative; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  #hmi { display: block; width: 100%; height: auto; max-height: 520px; }
+  #hmi .node.interactive { outline: none; }
+  #hmi .node.interactive:focus-visible .halo { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 5 4; }
+  #hmiMsg { padding: 36px 20px; text-align: center; color: var(--muted); }
+  #hmiMsg a { color: var(--accent); }
+  .hmi-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 8px; color: var(--muted); font-size: 12px; }
+  .hmi-legend i { display: inline-block; width: 16px; height: 6px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
+  .hmi-legend i.sq { width: 11px; height: 11px; border-radius: 2px; border: 2px solid; background: transparent; }
+
+  /* ---- sign-in / dialogs ---- */
+  .who { display: inline-flex; align-items: center; gap: 8px; }
+  button.secondary { background: var(--panel2); color: var(--text); border: 1px solid var(--border); font-weight: 600; }
+  button.secondary:hover:not(:disabled) { border-color: var(--accent); }
+  button.danger { background: var(--crit); color: #fff; }
+  button.warn { background: var(--high); color: #0e1319; }
+  button.big { padding: 9px 22px; font-size: 14px; }
+  dialog { background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; width: min(520px, 94vw); }
+  dialog::backdrop { background: rgba(0,0,0,.62); }
+  dialog h3 { margin: 0 0 4px; font-size: 17px; } dialog .sub { color: var(--muted); font-size: 12px; margin: 0 0 12px; }
+  dialog .actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+  .field { display: grid; grid-template-columns: 90px 1fr; gap: 6px 10px; align-items: center; margin-bottom: 8px; }
+  .field label { color: var(--muted); font-size: 12px; } .field input { width: 100%; }
+  input[type=password], input[type=number] { background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; font: inherit; width: 100%; }
+  .err { color: var(--crit); font-size: 13px; min-height: 18px; margin-top: 4px; }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; font-size: 13px; margin: 8px 0 12px; }
+  .kv dt { color: var(--muted); } .kv dd { margin: 0; font-variant-numeric: tabular-nums; word-break: break-word; }
+  .state-pill { display: inline-block; padding: 1px 10px; border-radius: 999px; font-weight: 700; font-size: 12px; color: #0e1319; background: var(--bad); }
+  .state-pill.open { background: var(--ok); } .state-pill.closed { background: var(--crit); color: #fff; } .state-pill.tripped { background: var(--crit); color: #fff; }
+  .fp-alarm { margin: 6px 0; font-size: 12px; } .fp-alarm .sevtag { margin-right: 6px; }
+  .fp-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0 4px; }
+  .fp-actions .sp { display: flex; align-items: center; gap: 6px; } .fp-actions .sp input { width: 90px; }
+  .fp-note { color: var(--muted); font-size: 12px; margin: 4px 0; }
+  .fp-confirm { border: 1px solid var(--high); background: rgba(240,136,62,.10); border-radius: 8px; padding: 12px 14px; margin-top: 12px; font-size: 15px; font-weight: 600; }
+  .fp-result { margin-top: 12px; padding: 10px 12px; border-radius: 8px; font-size: 13px; border: 1px solid var(--border); }
+  .fp-result.ok { border-color: var(--ok); } .fp-result.fail { border-color: var(--crit); }
+  .fp-recent { width: 100%; min-width: 0; font-size: 12px; margin-top: 4px; } .fp-recent td, .fp-recent th { padding: 3px 6px; white-space: normal; }
+  .st-EXECUTED { color: var(--ok); } .st-DENIED, .st-FAILED, .st-REJECTED, .st-NO_FEP { color: var(--crit); } .st-TIMEOUT, .st-PENDING { color: var(--med); }
   footer { color: var(--muted); font-size: 12px; text-align: center; margin-top: 8px; }
 </style>
 </head>
@@ -95,11 +140,24 @@
   <span id="conn" class="badge offline"><span class="dot"></span><span id="conntxt">CONNECTING</span></span>
   <span class="spacer"></span>
   <a href="/studio.html" id="studioLink" style="color:var(--accent);text-decoration:none;font-size:13px">Engineering Studio &rarr;</a>
+  <span class="who">
+    <span class="badge" id="who" title="Sign in to operate equipment">viewing only</span>
+    <button class="secondary" id="btnSignIn">Sign in</button>
+  </span>
   <label class="op">Operator <input type="text" id="user" maxlength="64" placeholder="your name" autocomplete="off"></label>
   <span class="badge" id="clock">--:--:--</span>
 </header>
 
 <div id="banner" role="status" aria-live="polite"><span class="sev"></span><span id="bannertxt">No active alarms</span></div>
+
+<section class="panel" aria-label="Station schematic">
+  <div class="hmi-head"><h2>Station schematic</h2><small id="hmiInfo"></small></div>
+  <div id="hmiWrap">
+    <svg id="hmi" class="live-scene" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Live station schematic" hidden></svg>
+    <div id="hmiMsg">Loading the deployed station layout…</div>
+  </div>
+  <div class="hmi-legend" id="hmiLegend"></div>
+</section>
 
 <section class="grid" aria-label="Live values">
   <div class="card" id="card-p_in"></div>
@@ -135,350 +193,31 @@
 <footer>Updates are pushed over WebSocket · history comes from the historian database</footer>
 <div id="toast" role="alert"></div>
 
-<script>
-"use strict";
-(function () {
-  const params = new URLSearchParams(location.search);
-  const TOKEN = params.get("token") || "";
-  const $ = (id) => document.getElementById(id);
-  if (TOKEN) $("studioLink").href = "/studio.html?token=" + encodeURIComponent(TOKEN);
-  const SEV = ["INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"];
-  const SEV_CLASS = ["info", "low", "med", "high", "crit"];
-  const SEV_COLOR = ["--info", "--low", "--med", "--high", "--crit"];
-  const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+<dialog id="signin" aria-labelledby="signinTitle">
+  <form method="dialog" id="signinForm">
+    <h3 id="signinTitle">Operator sign-in</h3>
+    <p class="sub" id="signinSub">Sign in with your operator account to operate equipment.</p>
+    <div class="field"><label for="siUser">Account</label><input type="text" id="siUser" autocomplete="username" maxlength="64"></div>
+    <div class="field"><label for="siToken">Access token</label><input type="password" id="siToken" autocomplete="current-password"></div>
+    <div class="err" id="siErr" role="alert"></div>
+    <div class="actions"><button type="button" class="secondary" id="siCancel">Cancel</button><button type="submit" id="siGo">Sign in</button></div>
+  </form>
+</dialog>
 
-  // Gauge scales for the three analog cards.
-  const GAUGES = {
-    p_in:  { suffix: "_P_IN",  title: "Inlet pressure",  min: 245, max: 255, dec: 1 },
-    p_out: { suffix: "_P_OUT", title: "Outlet pressure", min: 56,  max: 64,  dec: 1 },
-    temp:  { suffix: "_TEMP",  title: "Gas temperature", min: 10,  max: 20,  dec: 1 }
-  };
-  const LEAK_SUFFIX = "_LEAK";
+<dialog id="faceplate" aria-labelledby="fpTitle">
+  <h3 id="fpTitle">Equipment</h3>
+  <p class="sub" id="fpSub"></p>
+  <dl class="kv" id="fpStatus"></dl>
+  <div id="fpAlarms"></div>
+  <div id="fpConfirm" class="fp-confirm" hidden></div>
+  <div id="fpResult" class="fp-result" hidden role="status"></div>
+  <div id="fpActions" class="fp-actions"></div>
+  <div id="fpNote" class="fp-note"></div>
+  <div id="fpRecentWrap"></div>
+  <div class="actions"><button type="button" class="secondary" id="fpClose">Close</button></div>
+</dialog>
 
-  const tags = new Map();    // tag_id -> tag json
-  const alarms = new Map();  // alarm_id -> alarm json (active only)
-  let lastMsgAt = 0;
-  let station = "";
-
-  // ---------- helpers ----------
-  function el(tag, cls, text) {
-    const e = document.createElement(tag);
-    if (cls) e.className = cls;
-    if (text !== undefined) e.textContent = text;
-    return e;
-  }
-  function authHeaders(extra) {
-    const h = Object.assign({}, extra || {});
-    if (TOKEN) h["Authorization"] = "Bearer " + TOKEN;
-    return h;
-  }
-  function toast(msg, isErr) {
-    const t = $("toast");
-    t.textContent = msg; t.className = isErr ? "err" : ""; t.style.display = "block";
-    clearTimeout(toast.t); toast.t = setTimeout(() => { t.style.display = "none"; }, 4000);
-  }
-  function fmtTime(ms) {
-    if (!ms) return "-";
-    return new Date(ms).toLocaleTimeString([], { hour12: false });
-  }
-  function tagBySuffix(suffix) {
-    for (const [id, t] of tags) if (id.endsWith(suffix)) return t;
-    return null;
-  }
-  function severityForTag(tagId) {
-    let max = -1;
-    for (const a of alarms.values()) if (a.tag_id === tagId && a.severity_code > max) max = a.severity_code;
-    return max;
-  }
-
-  // ---------- operator name ----------
-  const userInput = $("user");
-  try { userInput.value = localStorage.getItem("scada.user") || ""; } catch (e) { /* storage may be blocked */ }
-  userInput.addEventListener("change", () => { try { localStorage.setItem("scada.user", userInput.value.trim()); } catch (e) {} });
-
-  // ---------- cards ----------
-  const ARC_LEN = 100;
-  function buildGaugeCard(card, g) {
-    card.textContent = "";
-    const name = el("div", "name");
-    name.append(el("span", "", g.title), el("span", "tag", "—"));
-    const val = el("div", "value"); val.append(document.createTextNode("--"), el("span", "unit", ""));
-    const svgNS = "http://www.w3.org/2000/svg";
-    const svg = document.createElementNS(svgNS, "svg");
-    svg.setAttribute("viewBox", "0 0 160 104"); svg.setAttribute("class", "gauge");
-    const mk = (cls, d) => { const p = document.createElementNS(svgNS, "path"); p.setAttribute("d", d); p.setAttribute("class", cls); p.setAttribute("pathLength", ARC_LEN); return p; };
-    const d = "M 14 82 A 66 66 0 0 1 146 82";
-    const track = mk("track", d), fill = mk("fill", d);
-    fill.setAttribute("stroke-dasharray", "0 " + ARC_LEN);
-    const t0 = document.createElementNS(svgNS, "text"); t0.setAttribute("x", 14); t0.setAttribute("y", 101); t0.setAttribute("text-anchor", "middle"); t0.textContent = g.min;
-    const t1 = document.createElementNS(svgNS, "text"); t1.setAttribute("x", 146); t1.setAttribute("y", 101); t1.setAttribute("text-anchor", "end"); t1.textContent = g.max;
-    svg.append(track, fill, t0, t1);
-    const meta = el("div", "meta"); meta.append(el("span", "q", "—"), el("span", "ts", "—"));
-    card.append(name, val, svg, meta);
-    card._ref = { tagEl: name.lastChild, valEl: val.firstChild, unitEl: val.lastChild, fill, q: meta.firstChild, ts: meta.lastChild };
-  }
-  function buildLeakCard(card) {
-    card.textContent = "";
-    const name = el("div", "name"); name.append(el("span", "", "Gas leak detector"), el("span", "tag", "—"));
-    const leak = el("div", "leak"); leak.append(el("div", "lamp"), el("div", "txt", "--"));
-    const meta = el("div", "meta"); meta.append(el("span", "q", "—"), el("span", "ts", "—"));
-    card.append(name, leak, meta);
-    card._ref = { tagEl: name.lastChild, leak, txt: leak.lastChild, q: meta.firstChild, ts: meta.lastChild };
-  }
-  for (const k of Object.keys(GAUGES)) buildGaugeCard($("card-" + k), GAUGES[k]);
-  buildLeakCard($("card-leak"));
-
-  function setQuality(ref, t) {
-    const good = t.quality === "GOOD";
-    ref.q.textContent = good ? "Quality: GOOD" : "Quality: " + t.quality.replaceAll("_", " ");
-    ref.q.className = "q " + (good ? "q-good" : "q-bad");
-    ref.ts.textContent = fmtTime(t.timestamp_ms);
-  }
-  function setCardSeverity(card, tagId) {
-    const s = severityForTag(tagId);
-    card.className = "card" + (s >= 0 ? " s-" + SEV_CLASS[s] : "");
-  }
-  function renderCards() {
-    for (const k of Object.keys(GAUGES)) {
-      const g = GAUGES[k], card = $("card-" + k), ref = card._ref, t = tagBySuffix(g.suffix);
-      if (!t) continue;
-      ref.tagEl.textContent = t.tag_id;
-      const good = t.quality === "GOOD" && t.value !== undefined;
-      ref.valEl.textContent = t.value === undefined ? "--" : t.value.toFixed(g.dec);
-      ref.unitEl.textContent = t.unit || "";
-      const frac = t.value === undefined ? 0 : Math.min(1, Math.max(0, (t.value - g.min) / (g.max - g.min)));
-      ref.fill.setAttribute("stroke-dasharray", (frac * ARC_LEN).toFixed(2) + " " + ARC_LEN);
-      const s = severityForTag(t.tag_id);
-      ref.fill.style.stroke = !good ? cssVar("--bad") : s >= 0 ? cssVar(SEV_COLOR[s]) : cssVar("--ok");
-      setQuality(ref, t); setCardSeverity(card, t.tag_id);
-    }
-    const lt = tagBySuffix(LEAK_SUFFIX), lc = $("card-leak"), lr = lc._ref;
-    if (lt) {
-      lr.tagEl.textContent = lt.tag_id;
-      const on = lt.state === true, bad = lt.quality !== "GOOD";
-      lr.leak.className = "leak" + (bad ? " bad" : on ? " on" : "");
-      lr.txt.textContent = bad ? "NO DATA" : on ? "LEAK DETECTED" : "NORMAL";
-      setQuality(lr, lt); setCardSeverity(lc, lt.tag_id);
-    }
-    const first = [...tags.keys()][0];
-    if (first) { station = first.replace(/_(P_IN|P_OUT|TEMP|LEAK)$/, ""); $("station").textContent = station; }
-  }
-
-  // ---------- alarms ----------
-  function renderAlarms() {
-    const list = [...alarms.values()].sort((a, b) => b.severity_code - a.severity_code || a.trigger_time_ms - b.trigger_time_ms);
-    const body = $("alarmbody"); body.textContent = "";
-    if (!list.length) {
-      const tr = el("tr"), td = el("td", "empty", "No active alarms"); td.colSpan = 8; tr.append(td); body.append(tr);
-    }
-    let unacked = 0;
-    for (const a of list) {
-      const needsAck = a.state === "UNACK_ALARM" || a.state === "UNACK_RTN";
-      if (needsAck) unacked++;
-      const tr = el("tr");
-      const sev = el("td"); sev.append(el("span", "sevtag sev-" + a.severity_code, a.severity));
-      const st = el("td", "state-" + a.state, a.state.replaceAll("_", " "));
-      const act = el("td"); const btn = el("button", "", "ACK");
-      btn.disabled = !needsAck; btn.setAttribute("aria-label", "Acknowledge " + a.alarm_id);
-      btn.addEventListener("click", () => acknowledge(a.alarm_id, btn));
-      act.append(btn);
-      tr.append(sev, el("td", "", a.alarm_id), el("td", "msg", a.message), el("td", "", a.trigger_value.toFixed(1)),
-        st, el("td", "", fmtTime(a.trigger_time_ms)), el("td", "", a.ack_by_user || ""), act);
-      body.append(tr);
-    }
-    const banner = $("banner"), top = list.length ? list.reduce((m, a) => Math.max(m, a.severity_code), 0) : -1;
-    banner.className = list.length ? "alarm" + (unacked ? " unacked" : "") : "";
-    banner.firstChild.style.background = top >= 0 ? cssVar(SEV_COLOR[top]) : cssVar("--ok");
-    $("bannertxt").textContent = list.length
-      ? list.length + " active alarm" + (list.length > 1 ? "s" : "") + " · " + unacked + " unacknowledged · highest " + SEV[top]
-      : "No active alarms";
-    renderCards();
-  }
-  async function acknowledge(id, btn) {
-    const user = userInput.value.trim();
-    if (!user) { toast("Enter your operator name first", true); userInput.focus(); return; }
-    btn.disabled = true;
-    try {
-      const r = await fetch("/api/v1/alarms/ack", {
-        method: "POST", headers: authHeaders({ "Content-Type": "application/json" }),
-        body: JSON.stringify({ alarm_id: id, user })
-      });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) { toast("Acknowledge failed: " + (j.error || r.status), true); btn.disabled = false; return; }
-      toast("Acknowledged " + id);
-    } catch (e) { toast("Acknowledge failed: " + e.message, true); btn.disabled = false; }
-  }
-  function applyAlarm(a) {
-    if (a.active) alarms.set(a.alarm_id, a); else alarms.delete(a.alarm_id);
-  }
-
-  // ---------- WebSocket ----------
-  let ws = null, retry = 1000;
-  function setConn(state, text) { $("conn").className = "badge " + state; $("conntxt").textContent = text; }
-  function connect() {
-    const url = (location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws/telemetry" + (TOKEN ? "?token=" + encodeURIComponent(TOKEN) : "");
-    setConn("offline", "CONNECTING");
-    ws = new WebSocket(url);
-    ws.onopen = () => { retry = 1000; setConn("live", "LIVE"); };
-    ws.onmessage = (ev) => {
-      let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
-      lastMsgAt = Date.now();
-      if (m.type === "snapshot") {
-        tags.clear(); alarms.clear();
-        m.tags.forEach((t) => tags.set(t.tag_id, t));
-        m.alarms.forEach(applyAlarm);
-        if (m.error) toast("Core data incomplete: " + m.error, true);
-        renderAlarms();
-      } else if (m.type === "telemetry") {
-        m.tags.forEach((t) => tags.set(t.tag_id, Object.assign({}, tags.get(t.tag_id), t)));
-        renderCards();
-      } else if (m.type === "alarm") {
-        applyAlarm(m.alarm); renderAlarms();
-      }
-    };
-    ws.onclose = () => {
-      setConn("offline", "OFFLINE · retry in " + Math.round(retry / 1000) + "s");
-      setTimeout(connect, retry); retry = Math.min(retry * 2, 10000);
-    };
-    ws.onerror = () => { try { ws.close(); } catch (e) {} };
-  }
-  setInterval(() => {
-    $("clock").textContent = new Date().toLocaleTimeString([], { hour12: false });
-    if (ws && ws.readyState === 1) {
-      const stale = Date.now() - lastMsgAt > 5000;
-      setConn(stale ? "stale" : "live", stale ? "NO DATA" : "LIVE");
-    }
-  }, 1000);
-
-  // ---------- trend chart (canvas) ----------
-  const cv = $("chart"), ctx = cv.getContext("2d"), tip = $("tip"), msg = $("chartmsg");
-  let trend = null;  // {start_ms, end_ms, series:[{tag_id, points}]}
-  const SERIES_COLORS = ["#58a6ff", "#f0883e"];
-  const PAD = { l: 58, r: 58, t: 14, b: 30 };
-
-  function sizeCanvas() {
-    const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
-    cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    return { w: r.width, h: r.height };
-  }
-  function niceRange(min, max) {
-    if (!isFinite(min) || !isFinite(max)) return [0, 1];
-    if (max - min < 1e-6) { min -= 0.5; max += 0.5; }
-    const pad = (max - min) * 0.08; return [min - pad, max + pad];
-  }
-  function drawChart(hoverX) {
-    const { w, h } = sizeCanvas();
-    ctx.clearRect(0, 0, w, h);
-    if (!trend) return;
-    const x0 = PAD.l, x1 = w - PAD.r, y0 = PAD.t, y1 = h - PAD.b;
-    const tmin = trend.start_ms, tmax = trend.end_ms;
-    const X = (t) => x0 + (t - tmin) / (tmax - tmin) * (x1 - x0);
-    const grid = cssVar("--border"), muted = cssVar("--muted");
-    ctx.font = "11px system-ui, sans-serif"; ctx.textBaseline = "middle";
-
-    // scales per series
-    const scales = trend.series.slice(0, 2).map((s) => {
-      let lo = Infinity, hi = -Infinity;
-      s.points.forEach((p) => { lo = Math.min(lo, p.min); hi = Math.max(hi, p.max); });
-      const [a, b] = niceRange(lo, hi);
-      return { lo: a, hi: b, Y: (v) => y1 - (v - a) / (b - a) * (y1 - y0) };
-    });
-
-    // grid + axes
-    ctx.strokeStyle = grid; ctx.lineWidth = 1; ctx.fillStyle = muted;
-    for (let i = 0; i <= 4; i++) {
-      const y = y0 + (y1 - y0) * i / 4;
-      ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
-      scales.forEach((sc, k) => {
-        const v = sc.hi - (sc.hi - sc.lo) * i / 4;
-        ctx.fillStyle = SERIES_COLORS[k]; ctx.textAlign = k === 0 ? "right" : "left";
-        ctx.fillText(v.toFixed(1), k === 0 ? x0 - 8 : x1 + 8, y);
-      });
-    }
-    ctx.fillStyle = muted; ctx.textAlign = "center";
-    const longRange = (tmax - tmin) > 3 * 3600e3;
-    const nt = w < 520 ? 3 : 5;
-    for (let i = 0; i <= nt; i++) {
-      const t = tmin + (tmax - tmin) * i / nt, x = X(t);
-      ctx.beginPath(); ctx.moveTo(x, y1); ctx.lineTo(x, y1 + 4); ctx.stroke();
-      const d = new Date(t);
-      ctx.fillText(d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: longRange ? undefined : "2-digit", hour12: false }), x, y1 + 16);
-    }
-
-    // series: min/max band + average line
-    trend.series.slice(0, 2).forEach((s, k) => {
-      const sc = scales[k], col = SERIES_COLORS[k];
-      if (!s.points.length) return;
-      ctx.save(); ctx.beginPath(); ctx.rect(x0, y0, x1 - x0, y1 - y0); ctx.clip();
-      ctx.globalAlpha = 0.16; ctx.fillStyle = col; ctx.beginPath();
-      s.points.forEach((p, i) => { const x = X(p.t); i ? ctx.lineTo(x, sc.Y(p.max)) : ctx.moveTo(x, sc.Y(p.max)); });
-      for (let i = s.points.length - 1; i >= 0; i--) ctx.lineTo(X(s.points[i].t), sc.Y(s.points[i].min));
-      ctx.closePath(); ctx.fill();
-      ctx.globalAlpha = 1; ctx.strokeStyle = col; ctx.lineWidth = 1.75; ctx.lineJoin = "round"; ctx.beginPath();
-      s.points.forEach((p, i) => { const x = X(p.t), y = sc.Y(p.avg); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
-      ctx.stroke();
-      if (s.points.length < 60) { ctx.fillStyle = col; s.points.forEach((p) => { ctx.beginPath(); ctx.arc(X(p.t), sc.Y(p.avg), 2.5, 0, 6.3); ctx.fill(); }); }
-      ctx.restore();
-    });
-
-    // hover
-    if (hoverX != null && hoverX >= x0 && hoverX <= x1) {
-      const t = tmin + (hoverX - x0) / (x1 - x0) * (tmax - tmin);
-      ctx.strokeStyle = muted; ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(hoverX, y0); ctx.lineTo(hoverX, y1); ctx.stroke(); ctx.setLineDash([]);
-      const rows = [];
-      trend.series.slice(0, 2).forEach((s, k) => {
-        let best = null;
-        s.points.forEach((p) => { if (!best || Math.abs(p.t - t) < Math.abs(best.t - t)) best = p; });
-        if (best) {
-          ctx.fillStyle = SERIES_COLORS[k]; ctx.beginPath(); ctx.arc(X(best.t), scales[k].Y(best.avg), 4, 0, 6.3); ctx.fill();
-          rows.push({ k, s, best });
-        }
-      });
-      tip.textContent = "";
-      if (rows.length) {
-        tip.append(el("div", "", new Date(rows[0].best.t).toLocaleString([], { hour12: false })));
-        rows.forEach((r) => {
-          const line = el("div", "", r.s.tag_id.replace(/^.*_(P_IN|P_OUT)$/, "$1") + ": " + r.best.avg.toFixed(2) + "  (min " + r.best.min.toFixed(2) + " / max " + r.best.max.toFixed(2) + ")");
-          line.style.color = SERIES_COLORS[r.k]; tip.append(line);
-        });
-        tip.style.display = "block";
-        const tw = tip.offsetWidth; tip.style.left = Math.min(Math.max(hoverX + 12, 4), w - tw - 4) + "px"; tip.style.top = (y0 + 6) + "px";
-      } else tip.style.display = "none";
-    } else tip.style.display = "none";
-  }
-  cv.addEventListener("mousemove", (e) => drawChart(e.clientX - cv.getBoundingClientRect().left));
-  cv.addEventListener("mouseleave", () => drawChart(null));
-  new ResizeObserver(() => drawChart(null)).observe($("chartwrap"));
-
-  async function loadTrend() {
-    const pin = tagBySuffix("_P_IN"), pout = tagBySuffix("_P_OUT");
-    if (!pin || !pout) { msg.textContent = "Waiting for tags…"; msg.style.display = "flex"; return; }
-    $("lg0").textContent = pin.tag_id; $("lg1").textContent = pout.tag_id;
-    const secs = parseInt($("range").value, 10), end = Date.now(), start = end - secs * 1000;
-    const q = new URLSearchParams({ start: start, end: end, buckets: 240 });
-    q.append("tag_id", pin.tag_id); q.append("tag_id", pout.tag_id);
-    try {
-      const r = await fetch("/api/v1/historian/trend?" + q, { headers: authHeaders(), cache: "no-store" });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.error || ("HTTP " + r.status));
-      trend = j;
-      const n = j.series.reduce((a, s) => a + s.points.length, 0);
-      if (n === 0) { msg.textContent = "No historian data in this range. Is the historian running?"; msg.style.display = "flex"; }
-      else msg.style.display = "none";
-    } catch (e) {
-      trend = null; msg.textContent = "Trend unavailable: " + e.message; msg.style.display = "flex";
-    }
-    drawChart(null);
-  }
-  $("range").addEventListener("change", loadTrend);
-  setInterval(loadTrend, 10000);
-
-  // first trend load as soon as the snapshot has delivered the tag ids
-  const waitTags = setInterval(() => { if (tagBySuffix("_P_IN") && tagBySuffix("_P_OUT")) { clearInterval(waitTags); loadTrend(); } }, 300);
-
-  connect();
-})();
-</script>
+<script src="/schematic.js"></script>
+<script src="/dashboard.js"></script>
 </body>
 </html>

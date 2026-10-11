@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -22,6 +23,7 @@ import (
 	"google.golang.org/grpc/keepalive"
 
 	scadav1 "github.com/example/scada-gas/gen/scada/v1"
+	"github.com/example/scada-gas/pkg/audit"
 	"github.com/example/scada-gas/pkg/gateway"
 	"github.com/example/scada-gas/pkg/grpcutil"
 	"github.com/example/scada-gas/pkg/historian"
@@ -42,10 +44,18 @@ func main() {
 	listen := flag.String("listen", "0.0.0.0:8080", "HTTP listen address")
 	coreAddr := flag.String("core", "127.0.0.1:50051", "core gRPC address")
 	dsn := flag.String("dsn", envOr("HISTORIAN_DSN", defaultDSN), "TimescaleDB connection string for trends (env HISTORIAN_DSN); empty disables trends")
+	usersFile := flag.String("users", "", "JSON file with operator accounts (user, role, token_sha256); enables per-operator authentication and control")
+	controlOpen := flag.Bool("control-open", false, "LAB ONLY: allow control commands without accounts; the user name in the request is not verified")
+	hashToken := flag.String("hash-token", "", "print the token_sha256 for a token and exit")
 	token := flag.String("token", os.Getenv("GATEWAY_TOKEN"), "shared token required for /api/v1 and /ws (env GATEWAY_TOKEN); empty disables authentication")
 	origins := flag.String("allowed-origins", "", "comma-separated extra WebSocket origins (e.g. http://localhost:3000); * allows all")
 	maxWS := flag.Int("max-ws-clients", 200, "maximum concurrent WebSocket clients")
 	flag.Parse()
+
+	if *hashToken != "" {
+		fmt.Println(gateway.HashToken(*hashToken))
+		return
+	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
@@ -95,7 +105,33 @@ func main() {
 	}
 	hub := gateway.NewHub(hcfg, core)
 
-	api := gateway.NewAPI(gateway.APIConfig{Core: core, Trend: trend, Hub: hub, Topology: topo, Static: web.FS, Token: *token})
+	var users []gateway.UserSpec
+	if *usersFile != "" {
+		var err error
+		if users, err = gateway.LoadUsers(*usersFile); err != nil {
+			log.Fatalf("[GW] %v", err)
+		}
+	}
+	authn, err := gateway.NewAuthenticator(*token, users, *controlOpen)
+	if err != nil {
+		log.Fatalf("[GW] accounts: %v", err)
+	}
+
+	var auditStore audit.Store
+	if *dsn != "" {
+		as, err := audit.NewPGStore(ctx, *dsn)
+		if err != nil {
+			log.Fatalf("[GW] audit store: %v", err)
+		}
+		auditStore = as
+	} else {
+		log.Printf("[GW] no DSN: the command audit log is kept in memory only and is lost on restart")
+		auditStore = audit.NewMemoryStore()
+	}
+	defer auditStore.Close()
+	control := gateway.NewControlAPI(core, auditStore, authn)
+
+	api := gateway.NewAPI(gateway.APIConfig{Core: core, Trend: trend, Hub: hub, Topology: topo, Control: control, Auth: authn, Static: web.FS})
 	srv := &http.Server{
 		Addr:              *listen,
 		Handler:           api.Handler(),
@@ -151,10 +187,21 @@ func main() {
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.ListenAndServe() }()
 	auth := "disabled"
-	if *token != "" {
-		auth = "token required"
+	switch {
+	case len(users) > 0:
+		auth = fmt.Sprintf("%d operator account(s)", len(users))
+	case *token != "":
+		auth = "shared token"
 	}
-	log.Printf("[GW] listening on http://%s (core=%s, auth=%s, trends=%t)", *listen, *coreAddr, auth, trend != nil)
+	ctl := "DISABLED (start with -users <file>)"
+	switch {
+	case len(users) > 0:
+		ctl = "enabled for named operators"
+	case *controlOpen:
+		ctl = "LAB MODE: control without verified users"
+		log.Printf("[GW] WARNING: -control-open is on: anyone who can reach this port can operate the plant, and user names are not verified")
+	}
+	log.Printf("[GW] listening on http://%s (core=%s, auth=%s, control=%s, trends=%t)", *listen, *coreAddr, auth, ctl, trend != nil)
 
 	select {
 	case err := <-errCh:

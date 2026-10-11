@@ -31,6 +31,7 @@ import (
 	scadav1 "github.com/example/scada-gas/gen/scada/v1"
 	"github.com/example/scada-gas/pkg/alarm"
 	"github.com/example/scada-gas/pkg/bus"
+	"github.com/example/scada-gas/pkg/command"
 	"github.com/example/scada-gas/pkg/rtdb"
 )
 
@@ -46,6 +47,8 @@ type core struct {
 	alarms    *bus.Broker[*scadav1.AlarmEvent]
 	logRTDB   bool
 	streams   atomic.Int64
+
+	commands *command.Hub
 
 	cfgMu   sync.RWMutex
 	configs map[string]*scadav1.RuntimeConfig // deployed topology config per station
@@ -144,6 +147,55 @@ func (c *core) onAlarmEvent(ev *scadav1.AlarmEvent) {
 		ev.GetMessage(), formatTime(alarm.EventTimeMs(ev)))
 }
 
+// --- supervisory control (commands) ----------------------------------------
+
+// SendControlCommand routes a command to the FEP of the target station and
+// returns its result. Called by the gateway.
+func (s *fepService) SendControlCommand(ctx context.Context, cmd *scadav1.ControlCommand) (*scadav1.CommandAck, error) {
+	ack := s.c.commands.Dispatch(ctx, cmd)
+	log.Printf("[CORE] command %s by %q: %s %s/%s -> %s (%s)", cmd.GetCommandId(), cmd.GetInitiatedByUser(),
+		cmd.GetAction(), cmd.GetTargetStationId(), cmd.GetTargetTagId(), ack.GetStatus(), ack.GetMessage())
+	return ack, nil
+}
+
+// SubscribeCommands is the long-lived stream a FEP opens to receive commands.
+func (s *fepService) SubscribeCommands(sub *scadav1.CommandSubscription, stream scadav1.ScadaFepCoreService_SubscribeCommandsServer) error {
+	if !stationIDPattern.MatchString(sub.GetStationId()) || strings.TrimSpace(sub.GetFepId()) == "" {
+		return status.Error(codes.InvalidArgument, "fep_id and a valid station_id are required")
+	}
+	sess, replaced := s.c.commands.Register(sub.GetFepId(), sub.GetStationId(), sub.GetCapabilities())
+	defer s.c.commands.Unregister(sess)
+	if replaced != nil {
+		log.Printf("[CORE] FEP %q replaced %q as command endpoint of station %s", sub.GetFepId(), replaced.FEPID, sub.GetStationId())
+	}
+	log.Printf("[CORE] FEP %q connected as command endpoint of station %s (%d commandable tags)", sub.GetFepId(), sub.GetStationId(), len(sub.GetCapabilities()))
+	defer log.Printf("[CORE] FEP %q command stream closed (station %s)", sub.GetFepId(), sub.GetStationId())
+	for {
+		select {
+		case <-stream.Context().Done():
+			return nil
+		case <-sess.Done():
+			return status.Error(codes.Aborted, "replaced by a newer FEP session")
+		case cmd := <-sess.Out:
+			if err := stream.Send(cmd); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+// ReportCommandResult receives the FEP's outcome of a command.
+func (s *fepService) ReportCommandResult(_ context.Context, ack *scadav1.CommandAck) (*scadav1.ReportAck, error) {
+	return &scadav1.ReportAck{Accepted: s.c.commands.Report(ack)}, nil
+}
+
+// GetCommandCapabilities lists the commandable tags of the connected stations.
+func (s *fepService) GetCommandCapabilities(_ context.Context, req *scadav1.GetCommandCapabilitiesRequest) (*scadav1.GetCommandCapabilitiesResponse, error) {
+	list := s.c.commands.Capabilities(req.GetStationId())
+	sort.Slice(list, func(i, j int) bool { return list[i].StationId < list[j].StationId })
+	return &scadav1.GetCommandCapabilitiesResponse{Stations: list}, nil
+}
+
 // --- alarm service ---------------------------------------------------------
 
 type alarmService struct {
@@ -210,7 +262,7 @@ func (s *dataService) GetCurrentTelemetry(_ context.Context, _ *scadav1.GetCurre
 			TagId: t.TagID, IsDigital: t.IsDigital, Value: t.Value, RawValue: t.RawValue,
 			State: t.State, EngineeringUnit: t.Unit, Quality: t.Quality,
 			TimestampUtcMs: t.TimestampMs, UpdateCount: t.UpdateCount,
-			IsSoe: t.IsSOE, SourceFepId: t.SourceFEP,
+			IsSoe: t.IsSOE, SourceFepId: t.SourceFEP, LastChangeUtcMs: t.LastChangeMs,
 		})
 	}
 	return &scadav1.GetCurrentTelemetryResponse{Tags: out, ServerTimeUtcMs: time.Now().UTC().UnixMilli()}, nil
@@ -358,6 +410,7 @@ func main() {
 	addr := flag.String("listen", "0.0.0.0:50051", "gRPC listen address")
 	station := flag.String("station", "TEH_CGS_01", "tag prefix used for the built-in alarm rules")
 	logRTDB := flag.Bool("log-rtdb", true, "print one [RTDB] line per tag update")
+	cmdTimeout := flag.Duration("command-timeout", 10*time.Second, "how long to wait for a FEP to report a command result")
 	flag.Parse()
 
 	lis, err := net.Listen("tcp", *addr)
@@ -371,6 +424,7 @@ func main() {
 		telemetry: bus.New[*scadav1.TelemetryStreamUpdate](),
 		alarms:    bus.New[*scadav1.AlarmEvent](),
 		logRTDB:   *logRTDB,
+		commands:  command.NewHub(*cmdTimeout),
 		configs:   make(map[string]*scadav1.RuntimeConfig),
 		cfgBus:    bus.New[*scadav1.RuntimeConfig](),
 	}

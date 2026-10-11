@@ -36,6 +36,7 @@ type Config struct {
 	Timeout  time.Duration
 	Analogs  []AnalogPoint
 	Digitals []DigitalPoint
+	Commands []CommandPoint // optional: what Execute may write
 }
 
 // DefaultStationPoints returns the tag map of the demo city gate station.
@@ -44,6 +45,7 @@ func DefaultStationPoints(station string) ([]AnalogPoint, []DigitalPoint) {
 		{TagID: station + "_P_IN", Register: 0, Unit: "PSI", Scale: 10, EngMin: 0, EngMax: 1500},
 		{TagID: station + "_P_OUT", Register: 1, Unit: "PSI", Scale: 10, EngMin: 0, EngMax: 500},
 		{TagID: station + "_TEMP", Register: 2, Unit: "°C", Scale: 10, EngMin: -40, EngMax: 100},
+		{TagID: station + "_P_OUT_SP", Register: 3, Unit: "PSI", Scale: 10, EngMin: 0, EngMax: 1500}, // outlet pressure setpoint
 	}
 	digitals := []DigitalPoint{
 		{TagID: station + "_LEAK", Address: 0},

@@ -49,6 +49,17 @@ message StreamAck {
 
 service ScadaFepCoreService {
   rpc StreamTelemetry(stream TelemetryStreamUpdate) returns (StreamAck);
+
+  // Phase 5: supervisory control (HMI -> gateway -> core -> FEP -> field).
+  // Called by the gateway; the core routes the command to the FEP of the
+  // target station and returns the FEP's result (or a TIMEOUT / NO_FEP outcome).
+  rpc SendControlCommand(ControlCommand) returns (CommandAck);
+  // Opened by every FEP: a long-lived stream of commands for its station.
+  rpc SubscribeCommands(CommandSubscription) returns (stream ControlCommand);
+  // Called by the FEP after it executed (or refused) a command.
+  rpc ReportCommandResult(CommandAck) returns (ReportAck);
+  // Which tags can be commanded, and with which actions, per connected station.
+  rpc GetCommandCapabilities(GetCommandCapabilitiesRequest) returns (GetCommandCapabilitiesResponse);
 }
 
 // ---------------------------------------------------------------------------
@@ -133,6 +144,7 @@ message TagSnapshot {
   uint64 update_count = 9;
   bool is_soe = 10;
   string source_fep_id = 11;
+  int64 last_change_utc_ms = 12;  // digital tags: when the state last changed
 }
 
 message GetCurrentTelemetryRequest {}
@@ -193,4 +205,63 @@ service ScadaConfigService {
   rpc GetRuntimeConfigs(GetRuntimeConfigsRequest) returns (GetRuntimeConfigsResponse);
   // Streams the current configs first, then every later deployment.
   rpc SubscribeConfig(SubscribeRequest) returns (stream RuntimeConfig);
+}
+
+// ---------------------------------------------------------------------------
+// Phase 5: downstream control commands
+// ---------------------------------------------------------------------------
+
+// Actions: CMD_OPEN_VALVE, CMD_CLOSE_VALVE, CMD_RESET_TRIP, CMD_SET_SETPOINT.
+message ControlCommand {
+  string command_id = 1;          // unique per command; resending the same id never executes twice
+  string target_station_id = 2;
+  string target_tag_id = 3;
+  string action = 4;
+  double setpoint_value = 5;      // only for CMD_SET_SETPOINT (engineering units)
+  string initiated_by_user = 6;
+  int64 timestamp_utc_ms = 7;     // set by the initiator; the core re-stamps it at dispatch
+}
+
+message CommandAck {
+  string command_id = 1;
+  bool success = 2;
+  string message = 3;
+  int64 executed_time_utc_ms = 4;
+  // EXECUTED | FAILED (field/FEP refused or write failed) | REJECTED (validation) |
+  // NO_FEP (station offline) | TIMEOUT (outcome unknown)
+  string status = 5;
+}
+
+// What a FEP can do for one tag.
+message CommandCapability {
+  string tag_id = 1;
+  repeated string actions = 2;
+  double min_value = 3;           // CMD_SET_SETPOINT limits (engineering units)
+  double max_value = 4;
+  string unit = 5;
+}
+
+message CommandSubscription {
+  string fep_id = 1;
+  string station_id = 2;
+  repeated CommandCapability capabilities = 3;
+}
+
+message ReportAck {
+  bool accepted = 1;
+}
+
+message GetCommandCapabilitiesRequest {
+  string station_id = 1;          // empty = all stations
+}
+
+message StationCapabilities {
+  string station_id = 1;
+  string fep_id = 2;
+  bool online = 3;
+  repeated CommandCapability capabilities = 4;
+}
+
+message GetCommandCapabilitiesResponse {
+  repeated StationCapabilities stations = 1;
 }

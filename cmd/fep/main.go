@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -21,9 +22,52 @@ import (
 	"google.golang.org/grpc/keepalive"
 
 	scadav1 "github.com/example/scada-gas/gen/scada/v1"
+	"github.com/example/scada-gas/pkg/command"
 	mbdrv "github.com/example/scada-gas/pkg/driver/modbus"
 	"github.com/example/scada-gas/pkg/grpcutil"
 )
+
+// maxCommandAge is how old (core clock vs FEP clock) a command may be when it
+// reaches the FEP. Older commands are refused: the operator already got a
+// timeout, and executing a stale command later would be surprising.
+const maxCommandAge = 15 * time.Second
+
+// handleCommand executes one command and reports the outcome to the core.
+func handleCommand(ctx context.Context, client scadav1.ScadaFepCoreServiceClient, drv *mbdrv.Driver, station string, cmd *scadav1.ControlCommand) {
+	var ack *scadav1.CommandAck
+	age := time.Since(time.UnixMilli(cmd.GetTimestampUtcMs()))
+	switch {
+	case cmd.GetTargetStationId() != station:
+		ack = &scadav1.CommandAck{Success: false, Status: command.StatusFailed, Message: "this FEP serves station " + station + ", not " + cmd.GetTargetStationId()}
+	case age > maxCommandAge:
+		ack = &scadav1.CommandAck{Success: false, Status: command.StatusFailed, Message: fmt.Sprintf("command expired in transit (%s old), nothing was written", age.Round(time.Millisecond))}
+	default:
+		ack = drv.Execute(cmd)
+	}
+	ack.CommandId = cmd.GetCommandId()
+	if ack.GetExecutedTimeUtcMs() == 0 {
+		ack.ExecutedTimeUtcMs = time.Now().UTC().UnixMilli()
+	}
+	log.Printf("[FEP] command %s by %q: %s %s -> %s (%s)", cmd.GetCommandId(), cmd.GetInitiatedByUser(),
+		cmd.GetAction(), cmd.GetTargetTagId(), ack.GetStatus(), ack.GetMessage())
+
+	for attempt, wait := 1, 200*time.Millisecond; ; attempt, wait = attempt+1, wait*2 {
+		rctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		r, err := client.ReportCommandResult(rctx, ack)
+		cancel()
+		if err == nil {
+			if !r.GetAccepted() {
+				log.Printf("[FEP] core did not accept the result of command %s (already finished or unknown)", cmd.GetCommandId())
+			}
+			return
+		}
+		if attempt >= 4 || ctx.Err() != nil {
+			log.Printf("[FEP] could not report the result of command %s: %v", cmd.GetCommandId(), err)
+			return
+		}
+		time.Sleep(wait)
+	}
+}
 
 // runtimeConfig tracks the topology configuration deployed from the Engineering
 // Studio and, when filtering is enabled, restricts the streamed tags to those
@@ -276,15 +320,21 @@ func main() {
 	bufSize := flag.Int("buffer", 7200, "max buffered updates while core is unreachable")
 	cfgSync := flag.Bool("config-sync", true, "subscribe to topology configurations deployed from the Engineering Studio")
 	cfgFilter := flag.Bool("config-filter", false, "stream only tags bound by the deployed topology (default: stream everything)")
+	control := flag.Bool("control", true, "accept supervisory control commands from the core (false = monitoring only)")
 	flag.Parse()
 
 	analogs, digitals := mbdrv.DefaultStationPoints(*station)
+	var commandPoints []mbdrv.CommandPoint
+	if *control {
+		commandPoints = mbdrv.DefaultCommandPoints(*station)
+	}
 	drv, err := mbdrv.New(mbdrv.Config{
 		Address:  *modbusAddr,
 		UnitID:   uint8(*unit),
 		Timeout:  2 * time.Second,
 		Analogs:  analogs,
 		Digitals: digitals,
+		Commands: commandPoints,
 	})
 	if err != nil {
 		log.Fatalf("[FEP] driver: %v", err)
@@ -322,6 +372,31 @@ func main() {
 	wg.Add(2)
 	go func() { defer wg.Done(); pollLoop(ctx, drv, *fepID, *interval, buf, rc) }()
 	go func() { defer wg.Done(); streamLoop(ctx, conn, buf) }()
+	if *control {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			client := scadav1.NewScadaFepCoreServiceClient(conn)
+			grpcutil.SubscribeLoop(ctx, "[FEP]", "command", func(c context.Context) (func() error, error) {
+				s, err := client.SubscribeCommands(c, &scadav1.CommandSubscription{
+					FepId: *fepID, StationId: *station, Capabilities: drv.Capabilities(),
+				})
+				if err != nil {
+					return nil, err
+				}
+				return func() error {
+					cmd, err := s.Recv()
+					if err != nil {
+						return err
+					}
+					handleCommand(ctx, client, drv, *station, cmd)
+					return nil
+				}, nil
+			})
+		}()
+	} else {
+		log.Printf("[FEP] control disabled (-control=false): this FEP is monitoring only")
+	}
 	if *cfgSync {
 		wg.Add(1)
 		go func() {

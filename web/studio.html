@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gas SCADA Engineering Studio</title>
 <link rel="icon" href="data:,">
+<link rel="stylesheet" href="/schematic.css">
 <style>
   :root {
     --bg: #0e1319; --panel: #151c24; --panel2: #1a232d; --border: #263140; --text: #e6edf3; --muted: #8a98a8;
@@ -75,41 +76,6 @@
   /* ---- SVG scene ---- */
   .gridline { stroke: var(--grid); stroke-width: 1; } .gridmajor { stroke: var(--gridmajor); stroke-width: 1; }
   .canvas-border { fill: none; stroke: var(--border); stroke-width: 2; }
-  .pipe { fill: none; stroke: var(--pipe); stroke-linecap: butt; stroke-linejoin: miter; transition: stroke .3s; }
-  .pipe-hit { fill: none; stroke: transparent; stroke-width: 16; cursor: pointer; pointer-events: stroke; }
-  .pipe-g.sel .pipe { filter: drop-shadow(0 0 4px var(--accent)); }
-  .pipe-flow { fill: none; stroke: rgba(255,255,255,.55); stroke-width: 2; stroke-dasharray: 6 14; pointer-events: none; display: none; }
-  body[data-mode=live] .pipe-g.flowing .pipe-flow { display: block; animation: flow 1.1s linear infinite; }
-  @keyframes flow { to { stroke-dashoffset: -20; } }
-  .pipe-lbl { fill: var(--muted); font-size: 10px; text-anchor: middle; pointer-events: none; }
-  body[data-mode=live] .pipe-lbl { display: none; }
-  .pipe-g.alm-unack .pipe { animation: blinkpipe 1s steps(2, jump-none) infinite; }
-  .pipe-g.alm-ack .pipe { stroke: var(--crit) !important; }
-  @keyframes blinkpipe { 0% { stroke: var(--crit); } 50% { stroke: #5a1d1b; } }
-
-  .node .sym line, .node .sym path, .node .sym rect, .node .sym circle, .node .sym polygon { stroke: var(--sym); stroke-width: 2; fill: none; stroke-linejoin: round; }
-  .node .sym .sfill { fill: var(--symbg); }
-  .node .sym .stub { stroke: var(--pipe); stroke-width: 4; }
-  .node .sym .dot { fill: var(--pipe); stroke: none; }
-  .node .sym text { fill: var(--sym); stroke: none; font: 700 10px system-ui, sans-serif; text-anchor: middle; dominant-baseline: central; }
-  .node .vbody { fill: transparent; transition: fill .35s, stroke .35s; }
-  .node.v-open .vbody { fill: rgba(63,185,80,.28); stroke: var(--ok); }
-  .node.v-closed .vbody { fill: var(--crit); stroke: var(--crit); }
-  .node.v-unknown .vbody { stroke: var(--bad); }
-  .node .hit { fill: transparent; stroke: none; cursor: move; }
-  body[data-mode=live] .node .hit { cursor: pointer; }
-  .node .halo { fill: none; stroke: none; rx: 6; }
-  .node.sel .halo { stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 5 4; }
-  .node.alm-ack .halo { stroke: var(--crit); stroke-width: 3; stroke-dasharray: none; fill: rgba(248,81,73,.10); }
-  .node.alm-unack .halo { stroke: var(--crit); stroke-width: 3; stroke-dasharray: none; animation: blinkhalo 1s steps(2, jump-none) infinite; }
-  @keyframes blinkhalo { 0% { fill: rgba(248,81,73,.35); stroke: var(--crit); } 50% { fill: rgba(248,81,73,0); stroke: #7a2825; } }
-  @media (prefers-reduced-motion: reduce) {
-    .node.alm-unack .halo { animation: none; fill: rgba(248,81,73,.35); } .pipe-g.alm-unack .pipe { animation: none; stroke: var(--crit); }
-    body[data-mode=live] .pipe-g.flowing .pipe-flow { animation: none; }
-  }
-  .idl { fill: var(--muted); font: 11px system-ui, sans-serif; text-anchor: middle; pointer-events: none; }
-  .val { fill: var(--text); font: 700 13px system-ui, sans-serif; text-anchor: middle; pointer-events: none; font-variant-numeric: tabular-nums; }
-  .val.bad { fill: var(--crit); }
   .term { fill: var(--panel); stroke: var(--accent); stroke-width: 2; cursor: crosshair; }
   .term:hover { fill: var(--accent); } .term.used { stroke: var(--bad); fill: var(--bg); cursor: not-allowed; opacity: .6; }
   .term.start { fill: var(--accent); }
@@ -230,6 +196,7 @@
 </dialog>
 <div id="toast" role="alert"></div>
 
+<script src="/schematic.js"></script>
 <script src="/editor.js"></script>
 </body>
 </html>

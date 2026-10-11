@@ -7,3 +7,8 @@ import _ "embed"
 //
 //go:embed topology_init.sql
 var TopologySQL string
+
+// ControlSQL is deploy/control_init.sql.
+//
+//go:embed control_init.sql
+var ControlSQL string

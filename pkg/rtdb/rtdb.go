@@ -22,6 +22,8 @@ type TagState struct {
 	UpdateCount uint64
 	IsSOE       bool
 	SourceFEP   string
+	// LastChangeMs is when a digital tag last changed state (0 for analog tags).
+	LastChangeMs int64
 }
 
 // RTDB is a thread-safe last-value store keyed by tag ID.
@@ -57,8 +59,12 @@ func (db *RTDB) UpdateDigital(fepID string, v *scadav1.DigitalTagValue) TagState
 	db.mu.Lock()
 	defer db.mu.Unlock()
 	t := db.slot(v.GetTagId())
+	changed := t.UpdateCount == 0 || !t.IsDigital || t.State != v.GetState()
 	t.IsDigital = true
 	t.State = v.GetState()
+	if changed {
+		t.LastChangeMs = v.GetTimestampUtcMs()
+	}
 	t.Value = 0
 	if t.State {
 		t.Value = 1

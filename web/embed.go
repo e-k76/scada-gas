@@ -3,7 +3,8 @@ package web
 
 import "embed"
 
-// FS contains index.html (live dashboard), studio.html and editor.js (Engineering Studio).
+// FS contains the operator dashboard (index.html, dashboard.js), the Engineering
+// Studio (studio.html, editor.js) and the code and styles they share.
 //
-//go:embed index.html studio.html editor.js
+//go:embed index.html dashboard.js studio.html editor.js schematic.js schematic.css
 var FS embed.FS

@@ -21,6 +21,7 @@ type GRPCCore struct {
 	data   scadav1.ScadaDataServiceClient
 	alarms scadav1.ScadaAlarmServiceClient
 	config scadav1.ScadaConfigServiceClient
+	fep    scadav1.ScadaFepCoreServiceClient
 }
 
 // NewGRPCCore wraps an established (or lazily connecting) client connection.
@@ -29,6 +30,7 @@ func NewGRPCCore(conn grpc.ClientConnInterface) *GRPCCore {
 		data:   scadav1.NewScadaDataServiceClient(conn),
 		alarms: scadav1.NewScadaAlarmServiceClient(conn),
 		config: scadav1.NewScadaConfigServiceClient(conn),
+		fep:    scadav1.NewScadaFepCoreServiceClient(conn),
 	}
 }
 
@@ -64,4 +66,18 @@ func (c *GRPCCore) RuntimeConfigs(ctx context.Context) ([]*scadav1.RuntimeConfig
 		return nil, err
 	}
 	return r.GetConfigs(), nil
+}
+
+// SendControlCommand forwards a supervisory command to the core.
+func (c *GRPCCore) SendControlCommand(ctx context.Context, cmd *scadav1.ControlCommand) (*scadav1.CommandAck, error) {
+	return c.fep.SendControlCommand(ctx, cmd)
+}
+
+// CommandCapabilities lists the commandable tags of the connected stations.
+func (c *GRPCCore) CommandCapabilities(ctx context.Context, station string) ([]*scadav1.StationCapabilities, error) {
+	r, err := c.fep.GetCommandCapabilities(ctx, &scadav1.GetCommandCapabilitiesRequest{StationId: station})
+	if err != nil {
+		return nil, err
+	}
+	return r.GetStations(), nil
 }

@@ -1,0 +1,17 @@
+[
+  {
+    "user": "alice",
+    "role": "operator",
+    "token_sha256": "bba775a1794a2ccaa524798e32cea98187c9a32d80433d760a92d449bfddff66"
+  },
+  {
+    "user": "bob",
+    "role": "engineer",
+    "token_sha256": "84c60dc436211b8b0816c38aa8bd40567b75d7fc47fdecab65f40885348c6bbd"
+  },
+  {
+    "user": "vera",
+    "role": "viewer",
+    "token_sha256": "c9d5905c3e3ade5e65adad4621026dc6127576eabffe3c4470a0e3dc791ffc6b"
+  }
+]

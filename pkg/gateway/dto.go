@@ -23,6 +23,8 @@ type TagJSON struct {
 	UpdateCount uint64   `json:"update_count,omitempty"`
 	SOE         bool     `json:"soe,omitempty"`
 	SourceFEP   string   `json:"source_fep,omitempty"`
+	// LastChangeMs is when a digital tag last changed state (snapshots only).
+	LastChangeMs int64 `json:"last_change_ms,omitempty"`
 }
 
 // AlarmJSON is the JSON form of an alarm event.
@@ -82,7 +84,7 @@ func TagFromSnapshot(t *scadav1.TagSnapshot) TagJSON {
 	j := TagJSON{
 		TagID: t.GetTagId(), Quality: qualityName(t.GetQuality()), QualityCode: int32(t.GetQuality()),
 		TimestampMs: t.GetTimestampUtcMs(), UpdateCount: t.GetUpdateCount(),
-		SOE: t.GetIsSoe(), SourceFEP: t.GetSourceFepId(), Unit: t.GetEngineeringUnit(),
+		SOE: t.GetIsSoe(), SourceFEP: t.GetSourceFepId(), Unit: t.GetEngineeringUnit(), LastChangeMs: t.GetLastChangeUtcMs(),
 	}
 	if t.GetIsDigital() {
 		st := t.GetState()

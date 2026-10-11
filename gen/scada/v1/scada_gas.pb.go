@@ -855,6 +855,7 @@ type TagSnapshot struct {
 	UpdateCount     uint64                 `protobuf:"varint,9,opt,name=update_count,json=updateCount,proto3" json:"update_count,omitempty"`
 	IsSoe           bool                   `protobuf:"varint,10,opt,name=is_soe,json=isSoe,proto3" json:"is_soe,omitempty"`
 	SourceFepId     string                 `protobuf:"bytes,11,opt,name=source_fep_id,json=sourceFepId,proto3" json:"source_fep_id,omitempty"`
+	LastChangeUtcMs int64                  `protobuf:"varint,12,opt,name=last_change_utc_ms,json=lastChangeUtcMs,proto3" json:"last_change_utc_ms,omitempty"` // digital tags: when the state last changed
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -964,6 +965,13 @@ func (x *TagSnapshot) GetSourceFepId() string {
 		return x.SourceFepId
 	}
 	return ""
+}
+
+func (x *TagSnapshot) GetLastChangeUtcMs() int64 {
+	if x != nil {
+		return x.LastChangeUtcMs
+	}
+	return 0
 }
 
 type GetCurrentTelemetryRequest struct {
@@ -1380,6 +1388,514 @@ func (x *GetRuntimeConfigsResponse) GetConfigs() []*RuntimeConfig {
 	return nil
 }
 
+// Actions: CMD_OPEN_VALVE, CMD_CLOSE_VALVE, CMD_RESET_TRIP, CMD_SET_SETPOINT.
+type ControlCommand struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	CommandId       string                 `protobuf:"bytes,1,opt,name=command_id,json=commandId,proto3" json:"command_id,omitempty"` // unique per command; resending the same id never executes twice
+	TargetStationId string                 `protobuf:"bytes,2,opt,name=target_station_id,json=targetStationId,proto3" json:"target_station_id,omitempty"`
+	TargetTagId     string                 `protobuf:"bytes,3,opt,name=target_tag_id,json=targetTagId,proto3" json:"target_tag_id,omitempty"`
+	Action          string                 `protobuf:"bytes,4,opt,name=action,proto3" json:"action,omitempty"`
+	SetpointValue   float64                `protobuf:"fixed64,5,opt,name=setpoint_value,json=setpointValue,proto3" json:"setpoint_value,omitempty"` // only for CMD_SET_SETPOINT (engineering units)
+	InitiatedByUser string                 `protobuf:"bytes,6,opt,name=initiated_by_user,json=initiatedByUser,proto3" json:"initiated_by_user,omitempty"`
+	TimestampUtcMs  int64                  `protobuf:"varint,7,opt,name=timestamp_utc_ms,json=timestampUtcMs,proto3" json:"timestamp_utc_ms,omitempty"` // set by the initiator; the core re-stamps it at dispatch
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ControlCommand) Reset() {
+	*x = ControlCommand{}
+	mi := &file_v1_scada_gas_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ControlCommand) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ControlCommand) ProtoMessage() {}
+
+func (x *ControlCommand) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_scada_gas_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ControlCommand.ProtoReflect.Descriptor instead.
+func (*ControlCommand) Descriptor() ([]byte, []int) {
+	return file_v1_scada_gas_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *ControlCommand) GetCommandId() string {
+	if x != nil {
+		return x.CommandId
+	}
+	return ""
+}
+
+func (x *ControlCommand) GetTargetStationId() string {
+	if x != nil {
+		return x.TargetStationId
+	}
+	return ""
+}
+
+func (x *ControlCommand) GetTargetTagId() string {
+	if x != nil {
+		return x.TargetTagId
+	}
+	return ""
+}
+
+func (x *ControlCommand) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *ControlCommand) GetSetpointValue() float64 {
+	if x != nil {
+		return x.SetpointValue
+	}
+	return 0
+}
+
+func (x *ControlCommand) GetInitiatedByUser() string {
+	if x != nil {
+		return x.InitiatedByUser
+	}
+	return ""
+}
+
+func (x *ControlCommand) GetTimestampUtcMs() int64 {
+	if x != nil {
+		return x.TimestampUtcMs
+	}
+	return 0
+}
+
+type CommandAck struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	CommandId         string                 `protobuf:"bytes,1,opt,name=command_id,json=commandId,proto3" json:"command_id,omitempty"`
+	Success           bool                   `protobuf:"varint,2,opt,name=success,proto3" json:"success,omitempty"`
+	Message           string                 `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
+	ExecutedTimeUtcMs int64                  `protobuf:"varint,4,opt,name=executed_time_utc_ms,json=executedTimeUtcMs,proto3" json:"executed_time_utc_ms,omitempty"`
+	// EXECUTED | FAILED (field/FEP refused or write failed) | REJECTED (validation) |
+	// NO_FEP (station offline) | TIMEOUT (outcome unknown)
+	Status        string `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CommandAck) Reset() {
+	*x = CommandAck{}
+	mi := &file_v1_scada_gas_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommandAck) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommandAck) ProtoMessage() {}
+
+func (x *CommandAck) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_scada_gas_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommandAck.ProtoReflect.Descriptor instead.
+func (*CommandAck) Descriptor() ([]byte, []int) {
+	return file_v1_scada_gas_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *CommandAck) GetCommandId() string {
+	if x != nil {
+		return x.CommandId
+	}
+	return ""
+}
+
+func (x *CommandAck) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *CommandAck) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *CommandAck) GetExecutedTimeUtcMs() int64 {
+	if x != nil {
+		return x.ExecutedTimeUtcMs
+	}
+	return 0
+}
+
+func (x *CommandAck) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+// What a FEP can do for one tag.
+type CommandCapability struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TagId         string                 `protobuf:"bytes,1,opt,name=tag_id,json=tagId,proto3" json:"tag_id,omitempty"`
+	Actions       []string               `protobuf:"bytes,2,rep,name=actions,proto3" json:"actions,omitempty"`
+	MinValue      float64                `protobuf:"fixed64,3,opt,name=min_value,json=minValue,proto3" json:"min_value,omitempty"` // CMD_SET_SETPOINT limits (engineering units)
+	MaxValue      float64                `protobuf:"fixed64,4,opt,name=max_value,json=maxValue,proto3" json:"max_value,omitempty"`
+	Unit          string                 `protobuf:"bytes,5,opt,name=unit,proto3" json:"unit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CommandCapability) Reset() {
+	*x = CommandCapability{}
+	mi := &file_v1_scada_gas_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommandCapability) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommandCapability) ProtoMessage() {}
+
+func (x *CommandCapability) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_scada_gas_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommandCapability.ProtoReflect.Descriptor instead.
+func (*CommandCapability) Descriptor() ([]byte, []int) {
+	return file_v1_scada_gas_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *CommandCapability) GetTagId() string {
+	if x != nil {
+		return x.TagId
+	}
+	return ""
+}
+
+func (x *CommandCapability) GetActions() []string {
+	if x != nil {
+		return x.Actions
+	}
+	return nil
+}
+
+func (x *CommandCapability) GetMinValue() float64 {
+	if x != nil {
+		return x.MinValue
+	}
+	return 0
+}
+
+func (x *CommandCapability) GetMaxValue() float64 {
+	if x != nil {
+		return x.MaxValue
+	}
+	return 0
+}
+
+func (x *CommandCapability) GetUnit() string {
+	if x != nil {
+		return x.Unit
+	}
+	return ""
+}
+
+type CommandSubscription struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	FepId         string                 `protobuf:"bytes,1,opt,name=fep_id,json=fepId,proto3" json:"fep_id,omitempty"`
+	StationId     string                 `protobuf:"bytes,2,opt,name=station_id,json=stationId,proto3" json:"station_id,omitempty"`
+	Capabilities  []*CommandCapability   `protobuf:"bytes,3,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CommandSubscription) Reset() {
+	*x = CommandSubscription{}
+	mi := &file_v1_scada_gas_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommandSubscription) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommandSubscription) ProtoMessage() {}
+
+func (x *CommandSubscription) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_scada_gas_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommandSubscription.ProtoReflect.Descriptor instead.
+func (*CommandSubscription) Descriptor() ([]byte, []int) {
+	return file_v1_scada_gas_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *CommandSubscription) GetFepId() string {
+	if x != nil {
+		return x.FepId
+	}
+	return ""
+}
+
+func (x *CommandSubscription) GetStationId() string {
+	if x != nil {
+		return x.StationId
+	}
+	return ""
+}
+
+func (x *CommandSubscription) GetCapabilities() []*CommandCapability {
+	if x != nil {
+		return x.Capabilities
+	}
+	return nil
+}
+
+type ReportAck struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Accepted      bool                   `protobuf:"varint,1,opt,name=accepted,proto3" json:"accepted,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReportAck) Reset() {
+	*x = ReportAck{}
+	mi := &file_v1_scada_gas_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReportAck) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReportAck) ProtoMessage() {}
+
+func (x *ReportAck) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_scada_gas_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReportAck.ProtoReflect.Descriptor instead.
+func (*ReportAck) Descriptor() ([]byte, []int) {
+	return file_v1_scada_gas_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *ReportAck) GetAccepted() bool {
+	if x != nil {
+		return x.Accepted
+	}
+	return false
+}
+
+type GetCommandCapabilitiesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	StationId     string                 `protobuf:"bytes,1,opt,name=station_id,json=stationId,proto3" json:"station_id,omitempty"` // empty = all stations
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCommandCapabilitiesRequest) Reset() {
+	*x = GetCommandCapabilitiesRequest{}
+	mi := &file_v1_scada_gas_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCommandCapabilitiesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCommandCapabilitiesRequest) ProtoMessage() {}
+
+func (x *GetCommandCapabilitiesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_scada_gas_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCommandCapabilitiesRequest.ProtoReflect.Descriptor instead.
+func (*GetCommandCapabilitiesRequest) Descriptor() ([]byte, []int) {
+	return file_v1_scada_gas_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *GetCommandCapabilitiesRequest) GetStationId() string {
+	if x != nil {
+		return x.StationId
+	}
+	return ""
+}
+
+type StationCapabilities struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	StationId     string                 `protobuf:"bytes,1,opt,name=station_id,json=stationId,proto3" json:"station_id,omitempty"`
+	FepId         string                 `protobuf:"bytes,2,opt,name=fep_id,json=fepId,proto3" json:"fep_id,omitempty"`
+	Online        bool                   `protobuf:"varint,3,opt,name=online,proto3" json:"online,omitempty"`
+	Capabilities  []*CommandCapability   `protobuf:"bytes,4,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StationCapabilities) Reset() {
+	*x = StationCapabilities{}
+	mi := &file_v1_scada_gas_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StationCapabilities) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StationCapabilities) ProtoMessage() {}
+
+func (x *StationCapabilities) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_scada_gas_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StationCapabilities.ProtoReflect.Descriptor instead.
+func (*StationCapabilities) Descriptor() ([]byte, []int) {
+	return file_v1_scada_gas_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *StationCapabilities) GetStationId() string {
+	if x != nil {
+		return x.StationId
+	}
+	return ""
+}
+
+func (x *StationCapabilities) GetFepId() string {
+	if x != nil {
+		return x.FepId
+	}
+	return ""
+}
+
+func (x *StationCapabilities) GetOnline() bool {
+	if x != nil {
+		return x.Online
+	}
+	return false
+}
+
+func (x *StationCapabilities) GetCapabilities() []*CommandCapability {
+	if x != nil {
+		return x.Capabilities
+	}
+	return nil
+}
+
+type GetCommandCapabilitiesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Stations      []*StationCapabilities `protobuf:"bytes,1,rep,name=stations,proto3" json:"stations,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCommandCapabilitiesResponse) Reset() {
+	*x = GetCommandCapabilitiesResponse{}
+	mi := &file_v1_scada_gas_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCommandCapabilitiesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCommandCapabilitiesResponse) ProtoMessage() {}
+
+func (x *GetCommandCapabilitiesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_scada_gas_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCommandCapabilitiesResponse.ProtoReflect.Descriptor instead.
+func (*GetCommandCapabilitiesResponse) Descriptor() ([]byte, []int) {
+	return file_v1_scada_gas_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *GetCommandCapabilitiesResponse) GetStations() []*StationCapabilities {
+	if x != nil {
+		return x.Stations
+	}
+	return nil
+}
+
 var File_v1_scada_gas_proto protoreflect.FileDescriptor
 
 const file_v1_scada_gas_proto_rawDesc = "" +
@@ -1433,7 +1949,7 @@ const file_v1_scada_gas_proto_rawDesc = "" +
 	"\x17GetActiveAlarmsResponse\x12,\n" +
 	"\x06alarms\x18\x01 \x03(\v2\x14.scada.v1.AlarmEventR\x06alarms\"7\n" +
 	"\x10SubscribeRequest\x12#\n" +
-	"\rsubscriber_id\x18\x01 \x01(\tR\fsubscriberId\"\xf0\x02\n" +
+	"\rsubscriber_id\x18\x01 \x01(\tR\fsubscriberId\"\x9d\x03\n" +
 	"\vTagSnapshot\x12\x15\n" +
 	"\x06tag_id\x18\x01 \x01(\tR\x05tagId\x12\x1d\n" +
 	"\n" +
@@ -1447,7 +1963,8 @@ const file_v1_scada_gas_proto_rawDesc = "" +
 	"\fupdate_count\x18\t \x01(\x04R\vupdateCount\x12\x15\n" +
 	"\x06is_soe\x18\n" +
 	" \x01(\bR\x05isSoe\x12\"\n" +
-	"\rsource_fep_id\x18\v \x01(\tR\vsourceFepId\"\x1c\n" +
+	"\rsource_fep_id\x18\v \x01(\tR\vsourceFepId\x12+\n" +
+	"\x12last_change_utc_ms\x18\f \x01(\x03R\x0flastChangeUtcMs\"\x1c\n" +
 	"\x1aGetCurrentTelemetryRequest\"u\n" +
 	"\x1bGetCurrentTelemetryResponse\x12)\n" +
 	"\x04tags\x18\x01 \x03(\v2\x15.scada.v1.TagSnapshotR\x04tags\x12+\n" +
@@ -1480,7 +1997,48 @@ const file_v1_scada_gas_proto_rawDesc = "" +
 	"\x14subscribers_notified\x18\x06 \x01(\x05R\x13subscribersNotified\"\x1a\n" +
 	"\x18GetRuntimeConfigsRequest\"N\n" +
 	"\x19GetRuntimeConfigsResponse\x121\n" +
-	"\aconfigs\x18\x01 \x03(\v2\x17.scada.v1.RuntimeConfigR\aconfigs*\xab\x01\n" +
+	"\aconfigs\x18\x01 \x03(\v2\x17.scada.v1.RuntimeConfigR\aconfigs\"\x94\x02\n" +
+	"\x0eControlCommand\x12\x1d\n" +
+	"\n" +
+	"command_id\x18\x01 \x01(\tR\tcommandId\x12*\n" +
+	"\x11target_station_id\x18\x02 \x01(\tR\x0ftargetStationId\x12\"\n" +
+	"\rtarget_tag_id\x18\x03 \x01(\tR\vtargetTagId\x12\x16\n" +
+	"\x06action\x18\x04 \x01(\tR\x06action\x12%\n" +
+	"\x0esetpoint_value\x18\x05 \x01(\x01R\rsetpointValue\x12*\n" +
+	"\x11initiated_by_user\x18\x06 \x01(\tR\x0finitiatedByUser\x12(\n" +
+	"\x10timestamp_utc_ms\x18\a \x01(\x03R\x0etimestampUtcMs\"\xa8\x01\n" +
+	"\n" +
+	"CommandAck\x12\x1d\n" +
+	"\n" +
+	"command_id\x18\x01 \x01(\tR\tcommandId\x12\x18\n" +
+	"\asuccess\x18\x02 \x01(\bR\asuccess\x12\x18\n" +
+	"\amessage\x18\x03 \x01(\tR\amessage\x12/\n" +
+	"\x14executed_time_utc_ms\x18\x04 \x01(\x03R\x11executedTimeUtcMs\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\"\x92\x01\n" +
+	"\x11CommandCapability\x12\x15\n" +
+	"\x06tag_id\x18\x01 \x01(\tR\x05tagId\x12\x18\n" +
+	"\aactions\x18\x02 \x03(\tR\aactions\x12\x1b\n" +
+	"\tmin_value\x18\x03 \x01(\x01R\bminValue\x12\x1b\n" +
+	"\tmax_value\x18\x04 \x01(\x01R\bmaxValue\x12\x12\n" +
+	"\x04unit\x18\x05 \x01(\tR\x04unit\"\x8c\x01\n" +
+	"\x13CommandSubscription\x12\x15\n" +
+	"\x06fep_id\x18\x01 \x01(\tR\x05fepId\x12\x1d\n" +
+	"\n" +
+	"station_id\x18\x02 \x01(\tR\tstationId\x12?\n" +
+	"\fcapabilities\x18\x03 \x03(\v2\x1b.scada.v1.CommandCapabilityR\fcapabilities\"'\n" +
+	"\tReportAck\x12\x1a\n" +
+	"\baccepted\x18\x01 \x01(\bR\baccepted\">\n" +
+	"\x1dGetCommandCapabilitiesRequest\x12\x1d\n" +
+	"\n" +
+	"station_id\x18\x01 \x01(\tR\tstationId\"\xa4\x01\n" +
+	"\x13StationCapabilities\x12\x1d\n" +
+	"\n" +
+	"station_id\x18\x01 \x01(\tR\tstationId\x12\x15\n" +
+	"\x06fep_id\x18\x02 \x01(\tR\x05fepId\x12\x16\n" +
+	"\x06online\x18\x03 \x01(\bR\x06online\x12?\n" +
+	"\fcapabilities\x18\x04 \x03(\v2\x1b.scada.v1.CommandCapabilityR\fcapabilities\"[\n" +
+	"\x1eGetCommandCapabilitiesResponse\x129\n" +
+	"\bstations\x18\x01 \x03(\v2\x1d.scada.v1.StationCapabilitiesR\bstations*\xab\x01\n" +
 	"\vDataQuality\x12\x13\n" +
 	"\x0fQUALITY_UNKNOWN\x10\x00\x12\x10\n" +
 	"\fQUALITY_GOOD\x10\x01\x12\x1c\n" +
@@ -1499,9 +2057,13 @@ const file_v1_scada_gas_proto_rawDesc = "" +
 	"\x11ALARM_UNACK_ALARM\x10\x00\x12\x13\n" +
 	"\x0fALARM_ACK_ALARM\x10\x01\x12\x13\n" +
 	"\x0fALARM_UNACK_RTN\x10\x02\x12\x11\n" +
-	"\rALARM_ACK_RTN\x10\x032`\n" +
+	"\rALARM_ACK_RTN\x10\x032\xa5\x03\n" +
 	"\x13ScadaFepCoreService\x12I\n" +
-	"\x0fStreamTelemetry\x12\x1f.scada.v1.TelemetryStreamUpdate\x1a\x13.scada.v1.StreamAck(\x012\x82\x02\n" +
+	"\x0fStreamTelemetry\x12\x1f.scada.v1.TelemetryStreamUpdate\x1a\x13.scada.v1.StreamAck(\x01\x12D\n" +
+	"\x12SendControlCommand\x12\x18.scada.v1.ControlCommand\x1a\x14.scada.v1.CommandAck\x12N\n" +
+	"\x11SubscribeCommands\x12\x1d.scada.v1.CommandSubscription\x1a\x18.scada.v1.ControlCommand0\x01\x12@\n" +
+	"\x13ReportCommandResult\x12\x14.scada.v1.CommandAck\x1a\x13.scada.v1.ReportAck\x12k\n" +
+	"\x16GetCommandCapabilities\x12'.scada.v1.GetCommandCapabilitiesRequest\x1a(.scada.v1.GetCommandCapabilitiesResponse2\x82\x02\n" +
 	"\x11ScadaAlarmService\x12I\n" +
 	"\x10AcknowledgeAlarm\x12\x19.scada.v1.AckAlarmRequest\x1a\x1a.scada.v1.AckAlarmResponse\x12V\n" +
 	"\x0fGetActiveAlarms\x12 .scada.v1.GetActiveAlarmsRequest\x1a!.scada.v1.GetActiveAlarmsResponse\x12J\n" +
@@ -1527,29 +2089,37 @@ func file_v1_scada_gas_proto_rawDescGZIP() []byte {
 }
 
 var file_v1_scada_gas_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_v1_scada_gas_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_v1_scada_gas_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_v1_scada_gas_proto_goTypes = []any{
-	(DataQuality)(0),                    // 0: scada.v1.DataQuality
-	(AlarmSeverity)(0),                  // 1: scada.v1.AlarmSeverity
-	(AlarmState)(0),                     // 2: scada.v1.AlarmState
-	(*AnalogTagValue)(nil),              // 3: scada.v1.AnalogTagValue
-	(*DigitalTagValue)(nil),             // 4: scada.v1.DigitalTagValue
-	(*TelemetryStreamUpdate)(nil),       // 5: scada.v1.TelemetryStreamUpdate
-	(*StreamAck)(nil),                   // 6: scada.v1.StreamAck
-	(*AlarmEvent)(nil),                  // 7: scada.v1.AlarmEvent
-	(*AckAlarmRequest)(nil),             // 8: scada.v1.AckAlarmRequest
-	(*AckAlarmResponse)(nil),            // 9: scada.v1.AckAlarmResponse
-	(*GetActiveAlarmsRequest)(nil),      // 10: scada.v1.GetActiveAlarmsRequest
-	(*GetActiveAlarmsResponse)(nil),     // 11: scada.v1.GetActiveAlarmsResponse
-	(*SubscribeRequest)(nil),            // 12: scada.v1.SubscribeRequest
-	(*TagSnapshot)(nil),                 // 13: scada.v1.TagSnapshot
-	(*GetCurrentTelemetryRequest)(nil),  // 14: scada.v1.GetCurrentTelemetryRequest
-	(*GetCurrentTelemetryResponse)(nil), // 15: scada.v1.GetCurrentTelemetryResponse
-	(*RuntimeConfig)(nil),               // 16: scada.v1.RuntimeConfig
-	(*DeployTopologyRequest)(nil),       // 17: scada.v1.DeployTopologyRequest
-	(*DeployTopologyResponse)(nil),      // 18: scada.v1.DeployTopologyResponse
-	(*GetRuntimeConfigsRequest)(nil),    // 19: scada.v1.GetRuntimeConfigsRequest
-	(*GetRuntimeConfigsResponse)(nil),   // 20: scada.v1.GetRuntimeConfigsResponse
+	(DataQuality)(0),                       // 0: scada.v1.DataQuality
+	(AlarmSeverity)(0),                     // 1: scada.v1.AlarmSeverity
+	(AlarmState)(0),                        // 2: scada.v1.AlarmState
+	(*AnalogTagValue)(nil),                 // 3: scada.v1.AnalogTagValue
+	(*DigitalTagValue)(nil),                // 4: scada.v1.DigitalTagValue
+	(*TelemetryStreamUpdate)(nil),          // 5: scada.v1.TelemetryStreamUpdate
+	(*StreamAck)(nil),                      // 6: scada.v1.StreamAck
+	(*AlarmEvent)(nil),                     // 7: scada.v1.AlarmEvent
+	(*AckAlarmRequest)(nil),                // 8: scada.v1.AckAlarmRequest
+	(*AckAlarmResponse)(nil),               // 9: scada.v1.AckAlarmResponse
+	(*GetActiveAlarmsRequest)(nil),         // 10: scada.v1.GetActiveAlarmsRequest
+	(*GetActiveAlarmsResponse)(nil),        // 11: scada.v1.GetActiveAlarmsResponse
+	(*SubscribeRequest)(nil),               // 12: scada.v1.SubscribeRequest
+	(*TagSnapshot)(nil),                    // 13: scada.v1.TagSnapshot
+	(*GetCurrentTelemetryRequest)(nil),     // 14: scada.v1.GetCurrentTelemetryRequest
+	(*GetCurrentTelemetryResponse)(nil),    // 15: scada.v1.GetCurrentTelemetryResponse
+	(*RuntimeConfig)(nil),                  // 16: scada.v1.RuntimeConfig
+	(*DeployTopologyRequest)(nil),          // 17: scada.v1.DeployTopologyRequest
+	(*DeployTopologyResponse)(nil),         // 18: scada.v1.DeployTopologyResponse
+	(*GetRuntimeConfigsRequest)(nil),       // 19: scada.v1.GetRuntimeConfigsRequest
+	(*GetRuntimeConfigsResponse)(nil),      // 20: scada.v1.GetRuntimeConfigsResponse
+	(*ControlCommand)(nil),                 // 21: scada.v1.ControlCommand
+	(*CommandAck)(nil),                     // 22: scada.v1.CommandAck
+	(*CommandCapability)(nil),              // 23: scada.v1.CommandCapability
+	(*CommandSubscription)(nil),            // 24: scada.v1.CommandSubscription
+	(*ReportAck)(nil),                      // 25: scada.v1.ReportAck
+	(*GetCommandCapabilitiesRequest)(nil),  // 26: scada.v1.GetCommandCapabilitiesRequest
+	(*StationCapabilities)(nil),            // 27: scada.v1.StationCapabilities
+	(*GetCommandCapabilitiesResponse)(nil), // 28: scada.v1.GetCommandCapabilitiesResponse
 }
 var file_v1_scada_gas_proto_depIdxs = []int32{
 	0,  // 0: scada.v1.AnalogTagValue.quality:type_name -> scada.v1.DataQuality
@@ -1564,29 +2134,40 @@ var file_v1_scada_gas_proto_depIdxs = []int32{
 	0,  // 9: scada.v1.TagSnapshot.quality:type_name -> scada.v1.DataQuality
 	13, // 10: scada.v1.GetCurrentTelemetryResponse.tags:type_name -> scada.v1.TagSnapshot
 	16, // 11: scada.v1.GetRuntimeConfigsResponse.configs:type_name -> scada.v1.RuntimeConfig
-	5,  // 12: scada.v1.ScadaFepCoreService.StreamTelemetry:input_type -> scada.v1.TelemetryStreamUpdate
-	8,  // 13: scada.v1.ScadaAlarmService.AcknowledgeAlarm:input_type -> scada.v1.AckAlarmRequest
-	10, // 14: scada.v1.ScadaAlarmService.GetActiveAlarms:input_type -> scada.v1.GetActiveAlarmsRequest
-	12, // 15: scada.v1.ScadaAlarmService.SubscribeAlarmEvents:input_type -> scada.v1.SubscribeRequest
-	12, // 16: scada.v1.ScadaDataService.SubscribeTelemetry:input_type -> scada.v1.SubscribeRequest
-	14, // 17: scada.v1.ScadaDataService.GetCurrentTelemetry:input_type -> scada.v1.GetCurrentTelemetryRequest
-	17, // 18: scada.v1.ScadaConfigService.DeployTopology:input_type -> scada.v1.DeployTopologyRequest
-	19, // 19: scada.v1.ScadaConfigService.GetRuntimeConfigs:input_type -> scada.v1.GetRuntimeConfigsRequest
-	12, // 20: scada.v1.ScadaConfigService.SubscribeConfig:input_type -> scada.v1.SubscribeRequest
-	6,  // 21: scada.v1.ScadaFepCoreService.StreamTelemetry:output_type -> scada.v1.StreamAck
-	9,  // 22: scada.v1.ScadaAlarmService.AcknowledgeAlarm:output_type -> scada.v1.AckAlarmResponse
-	11, // 23: scada.v1.ScadaAlarmService.GetActiveAlarms:output_type -> scada.v1.GetActiveAlarmsResponse
-	7,  // 24: scada.v1.ScadaAlarmService.SubscribeAlarmEvents:output_type -> scada.v1.AlarmEvent
-	5,  // 25: scada.v1.ScadaDataService.SubscribeTelemetry:output_type -> scada.v1.TelemetryStreamUpdate
-	15, // 26: scada.v1.ScadaDataService.GetCurrentTelemetry:output_type -> scada.v1.GetCurrentTelemetryResponse
-	18, // 27: scada.v1.ScadaConfigService.DeployTopology:output_type -> scada.v1.DeployTopologyResponse
-	20, // 28: scada.v1.ScadaConfigService.GetRuntimeConfigs:output_type -> scada.v1.GetRuntimeConfigsResponse
-	16, // 29: scada.v1.ScadaConfigService.SubscribeConfig:output_type -> scada.v1.RuntimeConfig
-	21, // [21:30] is the sub-list for method output_type
-	12, // [12:21] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	23, // 12: scada.v1.CommandSubscription.capabilities:type_name -> scada.v1.CommandCapability
+	23, // 13: scada.v1.StationCapabilities.capabilities:type_name -> scada.v1.CommandCapability
+	27, // 14: scada.v1.GetCommandCapabilitiesResponse.stations:type_name -> scada.v1.StationCapabilities
+	5,  // 15: scada.v1.ScadaFepCoreService.StreamTelemetry:input_type -> scada.v1.TelemetryStreamUpdate
+	21, // 16: scada.v1.ScadaFepCoreService.SendControlCommand:input_type -> scada.v1.ControlCommand
+	24, // 17: scada.v1.ScadaFepCoreService.SubscribeCommands:input_type -> scada.v1.CommandSubscription
+	22, // 18: scada.v1.ScadaFepCoreService.ReportCommandResult:input_type -> scada.v1.CommandAck
+	26, // 19: scada.v1.ScadaFepCoreService.GetCommandCapabilities:input_type -> scada.v1.GetCommandCapabilitiesRequest
+	8,  // 20: scada.v1.ScadaAlarmService.AcknowledgeAlarm:input_type -> scada.v1.AckAlarmRequest
+	10, // 21: scada.v1.ScadaAlarmService.GetActiveAlarms:input_type -> scada.v1.GetActiveAlarmsRequest
+	12, // 22: scada.v1.ScadaAlarmService.SubscribeAlarmEvents:input_type -> scada.v1.SubscribeRequest
+	12, // 23: scada.v1.ScadaDataService.SubscribeTelemetry:input_type -> scada.v1.SubscribeRequest
+	14, // 24: scada.v1.ScadaDataService.GetCurrentTelemetry:input_type -> scada.v1.GetCurrentTelemetryRequest
+	17, // 25: scada.v1.ScadaConfigService.DeployTopology:input_type -> scada.v1.DeployTopologyRequest
+	19, // 26: scada.v1.ScadaConfigService.GetRuntimeConfigs:input_type -> scada.v1.GetRuntimeConfigsRequest
+	12, // 27: scada.v1.ScadaConfigService.SubscribeConfig:input_type -> scada.v1.SubscribeRequest
+	6,  // 28: scada.v1.ScadaFepCoreService.StreamTelemetry:output_type -> scada.v1.StreamAck
+	22, // 29: scada.v1.ScadaFepCoreService.SendControlCommand:output_type -> scada.v1.CommandAck
+	21, // 30: scada.v1.ScadaFepCoreService.SubscribeCommands:output_type -> scada.v1.ControlCommand
+	25, // 31: scada.v1.ScadaFepCoreService.ReportCommandResult:output_type -> scada.v1.ReportAck
+	28, // 32: scada.v1.ScadaFepCoreService.GetCommandCapabilities:output_type -> scada.v1.GetCommandCapabilitiesResponse
+	9,  // 33: scada.v1.ScadaAlarmService.AcknowledgeAlarm:output_type -> scada.v1.AckAlarmResponse
+	11, // 34: scada.v1.ScadaAlarmService.GetActiveAlarms:output_type -> scada.v1.GetActiveAlarmsResponse
+	7,  // 35: scada.v1.ScadaAlarmService.SubscribeAlarmEvents:output_type -> scada.v1.AlarmEvent
+	5,  // 36: scada.v1.ScadaDataService.SubscribeTelemetry:output_type -> scada.v1.TelemetryStreamUpdate
+	15, // 37: scada.v1.ScadaDataService.GetCurrentTelemetry:output_type -> scada.v1.GetCurrentTelemetryResponse
+	18, // 38: scada.v1.ScadaConfigService.DeployTopology:output_type -> scada.v1.DeployTopologyResponse
+	20, // 39: scada.v1.ScadaConfigService.GetRuntimeConfigs:output_type -> scada.v1.GetRuntimeConfigsResponse
+	16, // 40: scada.v1.ScadaConfigService.SubscribeConfig:output_type -> scada.v1.RuntimeConfig
+	28, // [28:41] is the sub-list for method output_type
+	15, // [15:28] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_v1_scada_gas_proto_init() }
@@ -1600,7 +2181,7 @@ func file_v1_scada_gas_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_scada_gas_proto_rawDesc), len(file_v1_scada_gas_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   18,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   4,
 		},

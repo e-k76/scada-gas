@@ -19,7 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ScadaFepCoreService_StreamTelemetry_FullMethodName = "/scada.v1.ScadaFepCoreService/StreamTelemetry"
+	ScadaFepCoreService_StreamTelemetry_FullMethodName        = "/scada.v1.ScadaFepCoreService/StreamTelemetry"
+	ScadaFepCoreService_SendControlCommand_FullMethodName     = "/scada.v1.ScadaFepCoreService/SendControlCommand"
+	ScadaFepCoreService_SubscribeCommands_FullMethodName      = "/scada.v1.ScadaFepCoreService/SubscribeCommands"
+	ScadaFepCoreService_ReportCommandResult_FullMethodName    = "/scada.v1.ScadaFepCoreService/ReportCommandResult"
+	ScadaFepCoreService_GetCommandCapabilities_FullMethodName = "/scada.v1.ScadaFepCoreService/GetCommandCapabilities"
 )
 
 // ScadaFepCoreServiceClient is the client API for ScadaFepCoreService service.
@@ -27,6 +31,16 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ScadaFepCoreServiceClient interface {
 	StreamTelemetry(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[TelemetryStreamUpdate, StreamAck], error)
+	// Phase 5: supervisory control (HMI -> gateway -> core -> FEP -> field).
+	// Called by the gateway; the core routes the command to the FEP of the
+	// target station and returns the FEP's result (or a TIMEOUT / NO_FEP outcome).
+	SendControlCommand(ctx context.Context, in *ControlCommand, opts ...grpc.CallOption) (*CommandAck, error)
+	// Opened by every FEP: a long-lived stream of commands for its station.
+	SubscribeCommands(ctx context.Context, in *CommandSubscription, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ControlCommand], error)
+	// Called by the FEP after it executed (or refused) a command.
+	ReportCommandResult(ctx context.Context, in *CommandAck, opts ...grpc.CallOption) (*ReportAck, error)
+	// Which tags can be commanded, and with which actions, per connected station.
+	GetCommandCapabilities(ctx context.Context, in *GetCommandCapabilitiesRequest, opts ...grpc.CallOption) (*GetCommandCapabilitiesResponse, error)
 }
 
 type scadaFepCoreServiceClient struct {
@@ -50,11 +64,70 @@ func (c *scadaFepCoreServiceClient) StreamTelemetry(ctx context.Context, opts ..
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type ScadaFepCoreService_StreamTelemetryClient = grpc.ClientStreamingClient[TelemetryStreamUpdate, StreamAck]
 
+func (c *scadaFepCoreServiceClient) SendControlCommand(ctx context.Context, in *ControlCommand, opts ...grpc.CallOption) (*CommandAck, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommandAck)
+	err := c.cc.Invoke(ctx, ScadaFepCoreService_SendControlCommand_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *scadaFepCoreServiceClient) SubscribeCommands(ctx context.Context, in *CommandSubscription, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ControlCommand], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &ScadaFepCoreService_ServiceDesc.Streams[1], ScadaFepCoreService_SubscribeCommands_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[CommandSubscription, ControlCommand]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type ScadaFepCoreService_SubscribeCommandsClient = grpc.ServerStreamingClient[ControlCommand]
+
+func (c *scadaFepCoreServiceClient) ReportCommandResult(ctx context.Context, in *CommandAck, opts ...grpc.CallOption) (*ReportAck, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReportAck)
+	err := c.cc.Invoke(ctx, ScadaFepCoreService_ReportCommandResult_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *scadaFepCoreServiceClient) GetCommandCapabilities(ctx context.Context, in *GetCommandCapabilitiesRequest, opts ...grpc.CallOption) (*GetCommandCapabilitiesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCommandCapabilitiesResponse)
+	err := c.cc.Invoke(ctx, ScadaFepCoreService_GetCommandCapabilities_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ScadaFepCoreServiceServer is the server API for ScadaFepCoreService service.
 // All implementations must embed UnimplementedScadaFepCoreServiceServer
 // for forward compatibility.
 type ScadaFepCoreServiceServer interface {
 	StreamTelemetry(grpc.ClientStreamingServer[TelemetryStreamUpdate, StreamAck]) error
+	// Phase 5: supervisory control (HMI -> gateway -> core -> FEP -> field).
+	// Called by the gateway; the core routes the command to the FEP of the
+	// target station and returns the FEP's result (or a TIMEOUT / NO_FEP outcome).
+	SendControlCommand(context.Context, *ControlCommand) (*CommandAck, error)
+	// Opened by every FEP: a long-lived stream of commands for its station.
+	SubscribeCommands(*CommandSubscription, grpc.ServerStreamingServer[ControlCommand]) error
+	// Called by the FEP after it executed (or refused) a command.
+	ReportCommandResult(context.Context, *CommandAck) (*ReportAck, error)
+	// Which tags can be commanded, and with which actions, per connected station.
+	GetCommandCapabilities(context.Context, *GetCommandCapabilitiesRequest) (*GetCommandCapabilitiesResponse, error)
 	mustEmbedUnimplementedScadaFepCoreServiceServer()
 }
 
@@ -67,6 +140,18 @@ type UnimplementedScadaFepCoreServiceServer struct{}
 
 func (UnimplementedScadaFepCoreServiceServer) StreamTelemetry(grpc.ClientStreamingServer[TelemetryStreamUpdate, StreamAck]) error {
 	return status.Error(codes.Unimplemented, "method StreamTelemetry not implemented")
+}
+func (UnimplementedScadaFepCoreServiceServer) SendControlCommand(context.Context, *ControlCommand) (*CommandAck, error) {
+	return nil, status.Error(codes.Unimplemented, "method SendControlCommand not implemented")
+}
+func (UnimplementedScadaFepCoreServiceServer) SubscribeCommands(*CommandSubscription, grpc.ServerStreamingServer[ControlCommand]) error {
+	return status.Error(codes.Unimplemented, "method SubscribeCommands not implemented")
+}
+func (UnimplementedScadaFepCoreServiceServer) ReportCommandResult(context.Context, *CommandAck) (*ReportAck, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReportCommandResult not implemented")
+}
+func (UnimplementedScadaFepCoreServiceServer) GetCommandCapabilities(context.Context, *GetCommandCapabilitiesRequest) (*GetCommandCapabilitiesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCommandCapabilities not implemented")
 }
 func (UnimplementedScadaFepCoreServiceServer) mustEmbedUnimplementedScadaFepCoreServiceServer() {}
 func (UnimplementedScadaFepCoreServiceServer) testEmbeddedByValue()                             {}
@@ -96,18 +181,101 @@ func _ScadaFepCoreService_StreamTelemetry_Handler(srv interface{}, stream grpc.S
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type ScadaFepCoreService_StreamTelemetryServer = grpc.ClientStreamingServer[TelemetryStreamUpdate, StreamAck]
 
+func _ScadaFepCoreService_SendControlCommand_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ControlCommand)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ScadaFepCoreServiceServer).SendControlCommand(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ScadaFepCoreService_SendControlCommand_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ScadaFepCoreServiceServer).SendControlCommand(ctx, req.(*ControlCommand))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ScadaFepCoreService_SubscribeCommands_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(CommandSubscription)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ScadaFepCoreServiceServer).SubscribeCommands(m, &grpc.GenericServerStream[CommandSubscription, ControlCommand]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type ScadaFepCoreService_SubscribeCommandsServer = grpc.ServerStreamingServer[ControlCommand]
+
+func _ScadaFepCoreService_ReportCommandResult_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CommandAck)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ScadaFepCoreServiceServer).ReportCommandResult(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ScadaFepCoreService_ReportCommandResult_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ScadaFepCoreServiceServer).ReportCommandResult(ctx, req.(*CommandAck))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ScadaFepCoreService_GetCommandCapabilities_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCommandCapabilitiesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ScadaFepCoreServiceServer).GetCommandCapabilities(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ScadaFepCoreService_GetCommandCapabilities_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ScadaFepCoreServiceServer).GetCommandCapabilities(ctx, req.(*GetCommandCapabilitiesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ScadaFepCoreService_ServiceDesc is the grpc.ServiceDesc for ScadaFepCoreService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var ScadaFepCoreService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "scada.v1.ScadaFepCoreService",
 	HandlerType: (*ScadaFepCoreServiceServer)(nil),
-	Methods:     []grpc.MethodDesc{},
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "SendControlCommand",
+			Handler:    _ScadaFepCoreService_SendControlCommand_Handler,
+		},
+		{
+			MethodName: "ReportCommandResult",
+			Handler:    _ScadaFepCoreService_ReportCommandResult_Handler,
+		},
+		{
+			MethodName: "GetCommandCapabilities",
+			Handler:    _ScadaFepCoreService_GetCommandCapabilities_Handler,
+		},
+	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "StreamTelemetry",
 			Handler:       _ScadaFepCoreService_StreamTelemetry_Handler,
 			ClientStreams: true,
+		},
+		{
+			StreamName:    "SubscribeCommands",
+			Handler:       _ScadaFepCoreService_SubscribeCommands_Handler,
+			ServerStreams: true,
 		},
 	},
 	Metadata: "v1/scada_gas.proto",

@@ -2,7 +2,6 @@ package gateway
 
 import (
 	"context"
-	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -35,15 +34,18 @@ type APIConfig struct {
 	Core     Core
 	Trend    TrendSource // nil disables the trend endpoint (HTTP 503)
 	Hub      *Hub
-	Topology *TopologyAPI // Engineering Studio endpoints; nil disables
-	Static   fs.FS        // dashboard files served at "/"; nil disables
-	Token    string       // when set, /api/v1/* (except health) and /ws/* require it
+	Topology *TopologyAPI   // Engineering Studio endpoints; nil disables
+	Control  *ControlAPI    // supervisory control endpoints; nil disables
+	Auth     *Authenticator // nil = built from Token
+	Static   fs.FS          // dashboard files served at "/"; nil disables
+	Token    string         // when set, /api/v1/* (except health) and /ws/* require it
 	Timeout  time.Duration
 }
 
 // API serves the northbound REST endpoints and the WebSocket upgrade.
 type API struct {
-	cfg APIConfig
+	cfg   APIConfig
+	authn *Authenticator
 }
 
 // Limits for the trend endpoint.
@@ -61,14 +63,34 @@ const (
 	defaultCallTime = 5 * time.Second
 )
 
-var tagIDPattern = regexp.MustCompile(`^[A-Za-z0-9_.:\-]+$`)
+var (
+	tagIDPattern       = regexp.MustCompile(`^[A-Za-z0-9_.:\-]+$`)
+	stationPathPattern = regexp.MustCompile(`^[A-Za-z0-9_\-]{1,64}$`)
+)
+
+// decodeJSONStrict decodes exactly one JSON object and rejects unknown fields.
+func decodeJSONStrict(r io.Reader, dst any) error {
+	dec := json.NewDecoder(r)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(dst); err != nil {
+		return err
+	}
+	if err := dec.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		return errors.New("the body must contain a single JSON object")
+	}
+	return nil
+}
 
 // NewAPI creates the API.
 func NewAPI(cfg APIConfig) *API {
 	if cfg.Timeout <= 0 {
 		cfg.Timeout = defaultCallTime
 	}
-	return &API{cfg: cfg}
+	authn := cfg.Auth
+	if authn == nil {
+		authn, _ = NewAuthenticator(cfg.Token, nil, false) // no accounts: cannot fail
+	}
+	return &API{cfg: cfg, authn: authn}
 }
 
 // Handler returns the complete HTTP handler (REST, WebSocket and dashboard).
@@ -80,7 +102,10 @@ func (a *API) Handler() http.Handler {
 	mux.Handle("POST /api/v1/alarms/ack", a.auth(http.HandlerFunc(a.handleAlarmAck)))
 	mux.Handle("GET /api/v1/historian/trend", a.auth(http.HandlerFunc(a.handleTrend)))
 	if a.cfg.Topology != nil {
-		a.cfg.Topology.Register(mux, a.auth)
+		a.cfg.Topology.Register(mux, a.auth, func(h http.Handler) http.Handler { return a.auth(requireRole(RoleEngineer)(h)) })
+	}
+	if a.cfg.Control != nil {
+		a.cfg.Control.Register(mux, a.auth)
 	}
 	if a.cfg.Hub != nil {
 		mux.Handle("GET /ws/telemetry", a.auth(http.HandlerFunc(a.cfg.Hub.ServeWS)))
@@ -109,26 +134,10 @@ func securityHeaders(next http.Handler) http.Handler {
 	})
 }
 
-// auth enforces the optional shared token. Browsers cannot set headers on a
-// WebSocket handshake, so ?token= is accepted as well.
-func (a *API) auth(next http.Handler) http.Handler {
-	if a.cfg.Token == "" {
-		return next
-	}
-	want := []byte(a.cfg.Token)
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		got := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-		if got == "" {
-			got = r.URL.Query().Get("token")
-		}
-		if subtle.ConstantTimeCompare([]byte(got), want) != 1 {
-			w.Header().Set("WWW-Authenticate", `Bearer realm="scada-gateway"`)
-			writeError(w, http.StatusUnauthorized, "missing or invalid token")
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
+// auth authenticates the request (bearer token, or ?token= for WebSocket
+// handshakes) and stores the Principal in the request context. It does nothing
+// when no token or account is configured.
+func (a *API) auth(next http.Handler) http.Handler { return a.authn.middleware(next) }
 
 // --- helpers ------------------------------------------------------------------
 
@@ -292,6 +301,19 @@ func (a *API) handleAlarmAck(w http.ResponseWriter, r *http.Request) {
 	}
 	req.AlarmID = strings.TrimSpace(req.AlarmID)
 	req.User = strings.TrimSpace(req.User)
+	// With personal accounts the credentials decide who acknowledges: viewers
+	// may not, and nobody can acknowledge in somebody else's name.
+	if p := PrincipalFrom(r.Context()); p.Named() {
+		if p.Role < RoleOperator {
+			writeError(w, http.StatusForbidden, fmt.Sprintf("the %s role may not acknowledge alarms", p.Role))
+			return
+		}
+		if req.User != "" && req.User != p.User {
+			writeError(w, http.StatusForbidden, fmt.Sprintf("user %q does not match the authenticated operator %q", req.User, p.User))
+			return
+		}
+		req.User = p.User
+	}
 	if req.AlarmID == "" || len(req.AlarmID) > maxAlarmIDLen || !tagIDPattern.MatchString(req.AlarmID) {
 		writeError(w, http.StatusBadRequest, "alarm_id is required and must be a valid alarm id")
 		return

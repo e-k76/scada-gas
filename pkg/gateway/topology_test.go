@@ -161,7 +161,7 @@ func TestTopologyDeploy(t *testing.T) {
 		t.Fatalf("missing user: %d", resp.StatusCode)
 	}
 	resp, m := do(t, "POST", base+"/deploy", dbody, nil)
-	if resp.StatusCode != 200 || m["deployed"] != true || m["subscribers_notified"].(float64) != 2 || len(m["bound_tags"].([]any)) != 6 {
+	if resp.StatusCode != 200 || m["deployed"] != true || m["subscribers_notified"].(float64) != 2 || len(m["bound_tags"].([]any)) != 7 {
 		t.Fatalf("deploy: %d %v", resp.StatusCode, m)
 	}
 	if len(dep.reqs) != 1 || dep.reqs[0].Version != 1 || dep.reqs[0].DeployedBy != "erin" || dep.reqs[0].ComponentCount != 14 {
@@ -242,7 +242,7 @@ func TestReconcileRepublishesMissingConfigs(t *testing.T) {
 	api := NewTopologyAPI(store, dep)
 
 	api.Reconcile(ctx)
-	if len(dep.reqs) != 1 || dep.reqs[0].StationId != "ST1" || dep.reqs[0].Version != 1 || dep.reqs[0].DeployedBy != "ops" || len(dep.reqs[0].BoundTags) != 6 {
+	if len(dep.reqs) != 1 || dep.reqs[0].StationId != "ST1" || dep.reqs[0].Version != 1 || dep.reqs[0].DeployedBy != "ops" || len(dep.reqs[0].BoundTags) != 7 {
 		t.Fatalf("reconcile requests: %+v", dep.reqs)
 	}
 	dep.reqs = nil

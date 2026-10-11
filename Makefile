@@ -5,7 +5,7 @@ MODULE    := github.com/example/scada-gas
 PROTO_SRC := proto/v1/scada_gas.proto
 BIN_DIR   := bin
 
-.PHONY: all tools proto build run-sim run-core run-fep run-historian run-historian-log run-gateway alarms ack-all alarm-shell alarm-watch db-up db-down db-reset db-psql test clean
+.PHONY: all tools proto build run-sim run-core run-fep run-historian run-historian-log run-gateway run-gateway-demo hash-token alarms ack-all alarm-shell alarm-watch db-up db-down db-reset db-psql test clean
 
 all: proto build
 
@@ -49,6 +49,14 @@ run-historian-log:
 # Northbound API + WebSocket + dashboard on http://localhost:8080
 run-gateway:
 	go run ./cmd/gateway
+
+# Gateway with the demo operator accounts of deploy/users.example.json (alice/bob/vera).
+run-gateway-demo:
+	go run ./cmd/gateway -users deploy/users.example.json
+
+# Prints the token_sha256 for a users file entry: make hash-token TOKEN=secret
+hash-token:
+	@go run ./cmd/gateway -hash-token "$(TOKEN)"
 
 # Operator console for the alarm API.
 alarms:
