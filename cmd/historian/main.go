@@ -17,40 +17,11 @@ import (
 	"google.golang.org/grpc/keepalive"
 
 	scadav1 "github.com/example/scada-gas/gen/scada/v1"
+	"github.com/example/scada-gas/pkg/grpcutil"
 	"github.com/example/scada-gas/pkg/historian"
 )
 
 const defaultDSN = "postgres://scada:scada@127.0.0.1:5432/scada?sslmode=disable"
-
-// subscribeLoop keeps a server-streaming subscription alive, reconnecting
-// with exponential backoff, and calls recv for every message until it fails.
-func subscribeLoop(ctx context.Context, name string, open func(context.Context) (func() error, error)) {
-	backoff := time.Second
-	for ctx.Err() == nil {
-		recv, err := open(ctx)
-		if err == nil {
-			log.Printf("[HIST] %s subscription established", name)
-			backoff = time.Second
-			for {
-				if err = recv(); err != nil {
-					break
-				}
-			}
-		}
-		if ctx.Err() != nil {
-			return
-		}
-		log.Printf("[HIST] %s subscription lost: %v (retry in %s)", name, err, backoff)
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(backoff):
-		}
-		if backoff *= 2; backoff > 15*time.Second {
-			backoff = 15 * time.Second
-		}
-	}
-}
 
 func main() {
 	coreAddr := flag.String("core", "127.0.0.1:50051", "core gRPC address")
@@ -114,7 +85,7 @@ func main() {
 
 	run(func() { ing.Run(ctx) })
 	run(func() {
-		subscribeLoop(ctx, "telemetry", func(c context.Context) (func() error, error) {
+		grpcutil.SubscribeLoop(ctx, "[HIST]", "telemetry", func(c context.Context) (func() error, error) {
 			s, err := data.SubscribeTelemetry(c, self)
 			if err != nil {
 				return nil, err
@@ -130,7 +101,7 @@ func main() {
 		})
 	})
 	run(func() {
-		subscribeLoop(ctx, "alarm", func(c context.Context) (func() error, error) {
+		grpcutil.SubscribeLoop(ctx, "[HIST]", "alarm", func(c context.Context) (func() error, error) {
 			s, err := alarms.SubscribeAlarmEvents(c, self)
 			if err != nil {
 				return nil, err

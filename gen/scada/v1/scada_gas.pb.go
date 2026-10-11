@@ -841,6 +841,219 @@ func (x *SubscribeRequest) GetSubscriberId() string {
 	return ""
 }
 
+// TagSnapshot is the last-known state of one tag in the core RTDB.
+type TagSnapshot struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	TagId           string                 `protobuf:"bytes,1,opt,name=tag_id,json=tagId,proto3" json:"tag_id,omitempty"`
+	IsDigital       bool                   `protobuf:"varint,2,opt,name=is_digital,json=isDigital,proto3" json:"is_digital,omitempty"`
+	Value           float64                `protobuf:"fixed64,3,opt,name=value,proto3" json:"value,omitempty"` // engineering value (analog) or 0/1 (digital)
+	RawValue        float64                `protobuf:"fixed64,4,opt,name=raw_value,json=rawValue,proto3" json:"raw_value,omitempty"`
+	State           bool                   `protobuf:"varint,5,opt,name=state,proto3" json:"state,omitempty"` // digital state
+	EngineeringUnit string                 `protobuf:"bytes,6,opt,name=engineering_unit,json=engineeringUnit,proto3" json:"engineering_unit,omitempty"`
+	Quality         DataQuality            `protobuf:"varint,7,opt,name=quality,proto3,enum=scada.v1.DataQuality" json:"quality,omitempty"`
+	TimestampUtcMs  int64                  `protobuf:"varint,8,opt,name=timestamp_utc_ms,json=timestampUtcMs,proto3" json:"timestamp_utc_ms,omitempty"`
+	UpdateCount     uint64                 `protobuf:"varint,9,opt,name=update_count,json=updateCount,proto3" json:"update_count,omitempty"`
+	IsSoe           bool                   `protobuf:"varint,10,opt,name=is_soe,json=isSoe,proto3" json:"is_soe,omitempty"`
+	SourceFepId     string                 `protobuf:"bytes,11,opt,name=source_fep_id,json=sourceFepId,proto3" json:"source_fep_id,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *TagSnapshot) Reset() {
+	*x = TagSnapshot{}
+	mi := &file_v1_scada_gas_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TagSnapshot) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TagSnapshot) ProtoMessage() {}
+
+func (x *TagSnapshot) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_scada_gas_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TagSnapshot.ProtoReflect.Descriptor instead.
+func (*TagSnapshot) Descriptor() ([]byte, []int) {
+	return file_v1_scada_gas_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *TagSnapshot) GetTagId() string {
+	if x != nil {
+		return x.TagId
+	}
+	return ""
+}
+
+func (x *TagSnapshot) GetIsDigital() bool {
+	if x != nil {
+		return x.IsDigital
+	}
+	return false
+}
+
+func (x *TagSnapshot) GetValue() float64 {
+	if x != nil {
+		return x.Value
+	}
+	return 0
+}
+
+func (x *TagSnapshot) GetRawValue() float64 {
+	if x != nil {
+		return x.RawValue
+	}
+	return 0
+}
+
+func (x *TagSnapshot) GetState() bool {
+	if x != nil {
+		return x.State
+	}
+	return false
+}
+
+func (x *TagSnapshot) GetEngineeringUnit() string {
+	if x != nil {
+		return x.EngineeringUnit
+	}
+	return ""
+}
+
+func (x *TagSnapshot) GetQuality() DataQuality {
+	if x != nil {
+		return x.Quality
+	}
+	return DataQuality_QUALITY_UNKNOWN
+}
+
+func (x *TagSnapshot) GetTimestampUtcMs() int64 {
+	if x != nil {
+		return x.TimestampUtcMs
+	}
+	return 0
+}
+
+func (x *TagSnapshot) GetUpdateCount() uint64 {
+	if x != nil {
+		return x.UpdateCount
+	}
+	return 0
+}
+
+func (x *TagSnapshot) GetIsSoe() bool {
+	if x != nil {
+		return x.IsSoe
+	}
+	return false
+}
+
+func (x *TagSnapshot) GetSourceFepId() string {
+	if x != nil {
+		return x.SourceFepId
+	}
+	return ""
+}
+
+type GetCurrentTelemetryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCurrentTelemetryRequest) Reset() {
+	*x = GetCurrentTelemetryRequest{}
+	mi := &file_v1_scada_gas_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCurrentTelemetryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCurrentTelemetryRequest) ProtoMessage() {}
+
+func (x *GetCurrentTelemetryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_scada_gas_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCurrentTelemetryRequest.ProtoReflect.Descriptor instead.
+func (*GetCurrentTelemetryRequest) Descriptor() ([]byte, []int) {
+	return file_v1_scada_gas_proto_rawDescGZIP(), []int{11}
+}
+
+type GetCurrentTelemetryResponse struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Tags            []*TagSnapshot         `protobuf:"bytes,1,rep,name=tags,proto3" json:"tags,omitempty"` // sorted by tag_id
+	ServerTimeUtcMs int64                  `protobuf:"varint,2,opt,name=server_time_utc_ms,json=serverTimeUtcMs,proto3" json:"server_time_utc_ms,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *GetCurrentTelemetryResponse) Reset() {
+	*x = GetCurrentTelemetryResponse{}
+	mi := &file_v1_scada_gas_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCurrentTelemetryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCurrentTelemetryResponse) ProtoMessage() {}
+
+func (x *GetCurrentTelemetryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_scada_gas_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCurrentTelemetryResponse.ProtoReflect.Descriptor instead.
+func (*GetCurrentTelemetryResponse) Descriptor() ([]byte, []int) {
+	return file_v1_scada_gas_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *GetCurrentTelemetryResponse) GetTags() []*TagSnapshot {
+	if x != nil {
+		return x.Tags
+	}
+	return nil
+}
+
+func (x *GetCurrentTelemetryResponse) GetServerTimeUtcMs() int64 {
+	if x != nil {
+		return x.ServerTimeUtcMs
+	}
+	return 0
+}
+
 var File_v1_scada_gas_proto protoreflect.FileDescriptor
 
 const file_v1_scada_gas_proto_rawDesc = "" +
@@ -894,7 +1107,25 @@ const file_v1_scada_gas_proto_rawDesc = "" +
 	"\x17GetActiveAlarmsResponse\x12,\n" +
 	"\x06alarms\x18\x01 \x03(\v2\x14.scada.v1.AlarmEventR\x06alarms\"7\n" +
 	"\x10SubscribeRequest\x12#\n" +
-	"\rsubscriber_id\x18\x01 \x01(\tR\fsubscriberId*\xab\x01\n" +
+	"\rsubscriber_id\x18\x01 \x01(\tR\fsubscriberId\"\xf0\x02\n" +
+	"\vTagSnapshot\x12\x15\n" +
+	"\x06tag_id\x18\x01 \x01(\tR\x05tagId\x12\x1d\n" +
+	"\n" +
+	"is_digital\x18\x02 \x01(\bR\tisDigital\x12\x14\n" +
+	"\x05value\x18\x03 \x01(\x01R\x05value\x12\x1b\n" +
+	"\traw_value\x18\x04 \x01(\x01R\brawValue\x12\x14\n" +
+	"\x05state\x18\x05 \x01(\bR\x05state\x12)\n" +
+	"\x10engineering_unit\x18\x06 \x01(\tR\x0fengineeringUnit\x12/\n" +
+	"\aquality\x18\a \x01(\x0e2\x15.scada.v1.DataQualityR\aquality\x12(\n" +
+	"\x10timestamp_utc_ms\x18\b \x01(\x03R\x0etimestampUtcMs\x12!\n" +
+	"\fupdate_count\x18\t \x01(\x04R\vupdateCount\x12\x15\n" +
+	"\x06is_soe\x18\n" +
+	" \x01(\bR\x05isSoe\x12\"\n" +
+	"\rsource_fep_id\x18\v \x01(\tR\vsourceFepId\"\x1c\n" +
+	"\x1aGetCurrentTelemetryRequest\"u\n" +
+	"\x1bGetCurrentTelemetryResponse\x12)\n" +
+	"\x04tags\x18\x01 \x03(\v2\x15.scada.v1.TagSnapshotR\x04tags\x12+\n" +
+	"\x12server_time_utc_ms\x18\x02 \x01(\x03R\x0fserverTimeUtcMs*\xab\x01\n" +
 	"\vDataQuality\x12\x13\n" +
 	"\x0fQUALITY_UNKNOWN\x10\x00\x12\x10\n" +
 	"\fQUALITY_GOOD\x10\x01\x12\x1c\n" +
@@ -919,9 +1150,10 @@ const file_v1_scada_gas_proto_rawDesc = "" +
 	"\x11ScadaAlarmService\x12I\n" +
 	"\x10AcknowledgeAlarm\x12\x19.scada.v1.AckAlarmRequest\x1a\x1a.scada.v1.AckAlarmResponse\x12V\n" +
 	"\x0fGetActiveAlarms\x12 .scada.v1.GetActiveAlarmsRequest\x1a!.scada.v1.GetActiveAlarmsResponse\x12J\n" +
-	"\x14SubscribeAlarmEvents\x12\x1a.scada.v1.SubscribeRequest\x1a\x14.scada.v1.AlarmEvent0\x012g\n" +
+	"\x14SubscribeAlarmEvents\x12\x1a.scada.v1.SubscribeRequest\x1a\x14.scada.v1.AlarmEvent0\x012\xcb\x01\n" +
 	"\x10ScadaDataService\x12S\n" +
-	"\x12SubscribeTelemetry\x12\x1a.scada.v1.SubscribeRequest\x1a\x1f.scada.v1.TelemetryStreamUpdate0\x01B3Z1github.com/example/scada-gas/gen/scada/v1;scadav1b\x06proto3"
+	"\x12SubscribeTelemetry\x12\x1a.scada.v1.SubscribeRequest\x1a\x1f.scada.v1.TelemetryStreamUpdate0\x01\x12b\n" +
+	"\x13GetCurrentTelemetry\x12$.scada.v1.GetCurrentTelemetryRequest\x1a%.scada.v1.GetCurrentTelemetryResponseB3Z1github.com/example/scada-gas/gen/scada/v1;scadav1b\x06proto3"
 
 var (
 	file_v1_scada_gas_proto_rawDescOnce sync.Once
@@ -936,21 +1168,24 @@ func file_v1_scada_gas_proto_rawDescGZIP() []byte {
 }
 
 var file_v1_scada_gas_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_v1_scada_gas_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_v1_scada_gas_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_v1_scada_gas_proto_goTypes = []any{
-	(DataQuality)(0),                // 0: scada.v1.DataQuality
-	(AlarmSeverity)(0),              // 1: scada.v1.AlarmSeverity
-	(AlarmState)(0),                 // 2: scada.v1.AlarmState
-	(*AnalogTagValue)(nil),          // 3: scada.v1.AnalogTagValue
-	(*DigitalTagValue)(nil),         // 4: scada.v1.DigitalTagValue
-	(*TelemetryStreamUpdate)(nil),   // 5: scada.v1.TelemetryStreamUpdate
-	(*StreamAck)(nil),               // 6: scada.v1.StreamAck
-	(*AlarmEvent)(nil),              // 7: scada.v1.AlarmEvent
-	(*AckAlarmRequest)(nil),         // 8: scada.v1.AckAlarmRequest
-	(*AckAlarmResponse)(nil),        // 9: scada.v1.AckAlarmResponse
-	(*GetActiveAlarmsRequest)(nil),  // 10: scada.v1.GetActiveAlarmsRequest
-	(*GetActiveAlarmsResponse)(nil), // 11: scada.v1.GetActiveAlarmsResponse
-	(*SubscribeRequest)(nil),        // 12: scada.v1.SubscribeRequest
+	(DataQuality)(0),                    // 0: scada.v1.DataQuality
+	(AlarmSeverity)(0),                  // 1: scada.v1.AlarmSeverity
+	(AlarmState)(0),                     // 2: scada.v1.AlarmState
+	(*AnalogTagValue)(nil),              // 3: scada.v1.AnalogTagValue
+	(*DigitalTagValue)(nil),             // 4: scada.v1.DigitalTagValue
+	(*TelemetryStreamUpdate)(nil),       // 5: scada.v1.TelemetryStreamUpdate
+	(*StreamAck)(nil),                   // 6: scada.v1.StreamAck
+	(*AlarmEvent)(nil),                  // 7: scada.v1.AlarmEvent
+	(*AckAlarmRequest)(nil),             // 8: scada.v1.AckAlarmRequest
+	(*AckAlarmResponse)(nil),            // 9: scada.v1.AckAlarmResponse
+	(*GetActiveAlarmsRequest)(nil),      // 10: scada.v1.GetActiveAlarmsRequest
+	(*GetActiveAlarmsResponse)(nil),     // 11: scada.v1.GetActiveAlarmsResponse
+	(*SubscribeRequest)(nil),            // 12: scada.v1.SubscribeRequest
+	(*TagSnapshot)(nil),                 // 13: scada.v1.TagSnapshot
+	(*GetCurrentTelemetryRequest)(nil),  // 14: scada.v1.GetCurrentTelemetryRequest
+	(*GetCurrentTelemetryResponse)(nil), // 15: scada.v1.GetCurrentTelemetryResponse
 }
 var file_v1_scada_gas_proto_depIdxs = []int32{
 	0,  // 0: scada.v1.AnalogTagValue.quality:type_name -> scada.v1.DataQuality
@@ -962,21 +1197,25 @@ var file_v1_scada_gas_proto_depIdxs = []int32{
 	7,  // 6: scada.v1.AckAlarmResponse.alarm:type_name -> scada.v1.AlarmEvent
 	1,  // 7: scada.v1.GetActiveAlarmsRequest.min_severity:type_name -> scada.v1.AlarmSeverity
 	7,  // 8: scada.v1.GetActiveAlarmsResponse.alarms:type_name -> scada.v1.AlarmEvent
-	5,  // 9: scada.v1.ScadaFepCoreService.StreamTelemetry:input_type -> scada.v1.TelemetryStreamUpdate
-	8,  // 10: scada.v1.ScadaAlarmService.AcknowledgeAlarm:input_type -> scada.v1.AckAlarmRequest
-	10, // 11: scada.v1.ScadaAlarmService.GetActiveAlarms:input_type -> scada.v1.GetActiveAlarmsRequest
-	12, // 12: scada.v1.ScadaAlarmService.SubscribeAlarmEvents:input_type -> scada.v1.SubscribeRequest
-	12, // 13: scada.v1.ScadaDataService.SubscribeTelemetry:input_type -> scada.v1.SubscribeRequest
-	6,  // 14: scada.v1.ScadaFepCoreService.StreamTelemetry:output_type -> scada.v1.StreamAck
-	9,  // 15: scada.v1.ScadaAlarmService.AcknowledgeAlarm:output_type -> scada.v1.AckAlarmResponse
-	11, // 16: scada.v1.ScadaAlarmService.GetActiveAlarms:output_type -> scada.v1.GetActiveAlarmsResponse
-	7,  // 17: scada.v1.ScadaAlarmService.SubscribeAlarmEvents:output_type -> scada.v1.AlarmEvent
-	5,  // 18: scada.v1.ScadaDataService.SubscribeTelemetry:output_type -> scada.v1.TelemetryStreamUpdate
-	14, // [14:19] is the sub-list for method output_type
-	9,  // [9:14] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	0,  // 9: scada.v1.TagSnapshot.quality:type_name -> scada.v1.DataQuality
+	13, // 10: scada.v1.GetCurrentTelemetryResponse.tags:type_name -> scada.v1.TagSnapshot
+	5,  // 11: scada.v1.ScadaFepCoreService.StreamTelemetry:input_type -> scada.v1.TelemetryStreamUpdate
+	8,  // 12: scada.v1.ScadaAlarmService.AcknowledgeAlarm:input_type -> scada.v1.AckAlarmRequest
+	10, // 13: scada.v1.ScadaAlarmService.GetActiveAlarms:input_type -> scada.v1.GetActiveAlarmsRequest
+	12, // 14: scada.v1.ScadaAlarmService.SubscribeAlarmEvents:input_type -> scada.v1.SubscribeRequest
+	12, // 15: scada.v1.ScadaDataService.SubscribeTelemetry:input_type -> scada.v1.SubscribeRequest
+	14, // 16: scada.v1.ScadaDataService.GetCurrentTelemetry:input_type -> scada.v1.GetCurrentTelemetryRequest
+	6,  // 17: scada.v1.ScadaFepCoreService.StreamTelemetry:output_type -> scada.v1.StreamAck
+	9,  // 18: scada.v1.ScadaAlarmService.AcknowledgeAlarm:output_type -> scada.v1.AckAlarmResponse
+	11, // 19: scada.v1.ScadaAlarmService.GetActiveAlarms:output_type -> scada.v1.GetActiveAlarmsResponse
+	7,  // 20: scada.v1.ScadaAlarmService.SubscribeAlarmEvents:output_type -> scada.v1.AlarmEvent
+	5,  // 21: scada.v1.ScadaDataService.SubscribeTelemetry:output_type -> scada.v1.TelemetryStreamUpdate
+	15, // 22: scada.v1.ScadaDataService.GetCurrentTelemetry:output_type -> scada.v1.GetCurrentTelemetryResponse
+	17, // [17:23] is the sub-list for method output_type
+	11, // [11:17] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_v1_scada_gas_proto_init() }
@@ -990,7 +1229,7 @@ func file_v1_scada_gas_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_scada_gas_proto_rawDesc), len(file_v1_scada_gas_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   10,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   3,
 		},

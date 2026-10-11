@@ -298,15 +298,18 @@ var ScadaAlarmService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	ScadaDataService_SubscribeTelemetry_FullMethodName = "/scada.v1.ScadaDataService/SubscribeTelemetry"
+	ScadaDataService_SubscribeTelemetry_FullMethodName  = "/scada.v1.ScadaDataService/SubscribeTelemetry"
+	ScadaDataService_GetCurrentTelemetry_FullMethodName = "/scada.v1.ScadaDataService/GetCurrentTelemetry"
 )
 
 // ScadaDataServiceClient is the client API for ScadaDataService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ScadaDataServiceClient interface {
-	// Live feed of every telemetry batch the core ingests (used by the historian).
+	// Live feed of every telemetry batch the core ingests (historian, gateway).
 	SubscribeTelemetry(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[TelemetryStreamUpdate], error)
+	// Snapshot of every tag currently held in the core RTDB.
+	GetCurrentTelemetry(ctx context.Context, in *GetCurrentTelemetryRequest, opts ...grpc.CallOption) (*GetCurrentTelemetryResponse, error)
 }
 
 type scadaDataServiceClient struct {
@@ -336,12 +339,24 @@ func (c *scadaDataServiceClient) SubscribeTelemetry(ctx context.Context, in *Sub
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type ScadaDataService_SubscribeTelemetryClient = grpc.ServerStreamingClient[TelemetryStreamUpdate]
 
+func (c *scadaDataServiceClient) GetCurrentTelemetry(ctx context.Context, in *GetCurrentTelemetryRequest, opts ...grpc.CallOption) (*GetCurrentTelemetryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCurrentTelemetryResponse)
+	err := c.cc.Invoke(ctx, ScadaDataService_GetCurrentTelemetry_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ScadaDataServiceServer is the server API for ScadaDataService service.
 // All implementations must embed UnimplementedScadaDataServiceServer
 // for forward compatibility.
 type ScadaDataServiceServer interface {
-	// Live feed of every telemetry batch the core ingests (used by the historian).
+	// Live feed of every telemetry batch the core ingests (historian, gateway).
 	SubscribeTelemetry(*SubscribeRequest, grpc.ServerStreamingServer[TelemetryStreamUpdate]) error
+	// Snapshot of every tag currently held in the core RTDB.
+	GetCurrentTelemetry(context.Context, *GetCurrentTelemetryRequest) (*GetCurrentTelemetryResponse, error)
 	mustEmbedUnimplementedScadaDataServiceServer()
 }
 
@@ -354,6 +369,9 @@ type UnimplementedScadaDataServiceServer struct{}
 
 func (UnimplementedScadaDataServiceServer) SubscribeTelemetry(*SubscribeRequest, grpc.ServerStreamingServer[TelemetryStreamUpdate]) error {
 	return status.Error(codes.Unimplemented, "method SubscribeTelemetry not implemented")
+}
+func (UnimplementedScadaDataServiceServer) GetCurrentTelemetry(context.Context, *GetCurrentTelemetryRequest) (*GetCurrentTelemetryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCurrentTelemetry not implemented")
 }
 func (UnimplementedScadaDataServiceServer) mustEmbedUnimplementedScadaDataServiceServer() {}
 func (UnimplementedScadaDataServiceServer) testEmbeddedByValue()                          {}
@@ -387,13 +405,36 @@ func _ScadaDataService_SubscribeTelemetry_Handler(srv interface{}, stream grpc.S
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type ScadaDataService_SubscribeTelemetryServer = grpc.ServerStreamingServer[TelemetryStreamUpdate]
 
+func _ScadaDataService_GetCurrentTelemetry_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCurrentTelemetryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ScadaDataServiceServer).GetCurrentTelemetry(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ScadaDataService_GetCurrentTelemetry_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ScadaDataServiceServer).GetCurrentTelemetry(ctx, req.(*GetCurrentTelemetryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ScadaDataService_ServiceDesc is the grpc.ServiceDesc for ScadaDataService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var ScadaDataService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "scada.v1.ScadaDataService",
 	HandlerType: (*ScadaDataServiceServer)(nil),
-	Methods:     []grpc.MethodDesc{},
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetCurrentTelemetry",
+			Handler:    _ScadaDataService_GetCurrentTelemetry_Handler,
+		},
+	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "SubscribeTelemetry",

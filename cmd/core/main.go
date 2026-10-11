@@ -195,6 +195,20 @@ type dataService struct {
 	c *core
 }
 
+func (s *dataService) GetCurrentTelemetry(_ context.Context, _ *scadav1.GetCurrentTelemetryRequest) (*scadav1.GetCurrentTelemetryResponse, error) {
+	snap := s.c.db.Snapshot()
+	out := make([]*scadav1.TagSnapshot, 0, len(snap))
+	for _, t := range snap {
+		out = append(out, &scadav1.TagSnapshot{
+			TagId: t.TagID, IsDigital: t.IsDigital, Value: t.Value, RawValue: t.RawValue,
+			State: t.State, EngineeringUnit: t.Unit, Quality: t.Quality,
+			TimestampUtcMs: t.TimestampMs, UpdateCount: t.UpdateCount,
+			IsSoe: t.IsSOE, SourceFepId: t.SourceFEP,
+		})
+	}
+	return &scadav1.GetCurrentTelemetryResponse{Tags: out, ServerTimeUtcMs: time.Now().UTC().UnixMilli()}, nil
+}
+
 func (s *dataService) SubscribeTelemetry(req *scadav1.SubscribeRequest, stream scadav1.ScadaDataService_SubscribeTelemetryServer) error {
 	sub := s.c.telemetry.Subscribe(4096)
 	defer sub.Cancel()

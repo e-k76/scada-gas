@@ -5,7 +5,7 @@ MODULE    := github.com/example/scada-gas
 PROTO_SRC := proto/v1/scada_gas.proto
 BIN_DIR   := bin
 
-.PHONY: all tools proto build run-sim run-core run-fep run-historian run-historian-log alarms ack-all alarm-shell alarm-watch db-up db-down db-reset db-psql test clean
+.PHONY: all tools proto build run-sim run-core run-fep run-historian run-historian-log run-gateway alarms ack-all alarm-shell alarm-watch db-up db-down db-reset db-psql test clean
 
 all: proto build
 
@@ -27,6 +27,7 @@ build: proto
 	go build -o $(BIN_DIR)/core ./cmd/core
 	go build -o $(BIN_DIR)/historian ./cmd/historian
 	go build -o $(BIN_DIR)/alarmcli ./cmd/alarmcli
+	go build -o $(BIN_DIR)/gateway ./cmd/gateway
 
 run-sim:
 	go run ./cmd/simulator
@@ -44,6 +45,10 @@ run-historian:
 # Historian without a database: prints the rows it would store.
 run-historian-log:
 	go run ./cmd/historian -log-only
+
+# Northbound API + WebSocket + dashboard on http://localhost:8080
+run-gateway:
+	go run ./cmd/gateway
 
 # Operator console for the alarm API.
 alarms:

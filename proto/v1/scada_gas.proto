@@ -116,7 +116,35 @@ service ScadaAlarmService {
   rpc SubscribeAlarmEvents(SubscribeRequest) returns (stream AlarmEvent);
 }
 
+// ---------------------------------------------------------------------------
+// Phase 3: northbound access to the core RTDB
+// ---------------------------------------------------------------------------
+
+// TagSnapshot is the last-known state of one tag in the core RTDB.
+message TagSnapshot {
+  string tag_id = 1;
+  bool is_digital = 2;
+  double value = 3;             // engineering value (analog) or 0/1 (digital)
+  double raw_value = 4;
+  bool state = 5;               // digital state
+  string engineering_unit = 6;
+  DataQuality quality = 7;
+  int64 timestamp_utc_ms = 8;
+  uint64 update_count = 9;
+  bool is_soe = 10;
+  string source_fep_id = 11;
+}
+
+message GetCurrentTelemetryRequest {}
+
+message GetCurrentTelemetryResponse {
+  repeated TagSnapshot tags = 1;  // sorted by tag_id
+  int64 server_time_utc_ms = 2;
+}
+
 service ScadaDataService {
-  // Live feed of every telemetry batch the core ingests (used by the historian).
+  // Live feed of every telemetry batch the core ingests (historian, gateway).
   rpc SubscribeTelemetry(SubscribeRequest) returns (stream TelemetryStreamUpdate);
+  // Snapshot of every tag currently held in the core RTDB.
+  rpc GetCurrentTelemetry(GetCurrentTelemetryRequest) returns (GetCurrentTelemetryResponse);
 }
