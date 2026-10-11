@@ -80,6 +80,115 @@ func (DataQuality) EnumDescriptor() ([]byte, []int) {
 	return file_v1_scada_gas_proto_rawDescGZIP(), []int{0}
 }
 
+type AlarmSeverity int32
+
+const (
+	AlarmSeverity_SEVERITY_INFO     AlarmSeverity = 0
+	AlarmSeverity_SEVERITY_LOW      AlarmSeverity = 1
+	AlarmSeverity_SEVERITY_MEDIUM   AlarmSeverity = 2
+	AlarmSeverity_SEVERITY_HIGH     AlarmSeverity = 3
+	AlarmSeverity_SEVERITY_CRITICAL AlarmSeverity = 4
+)
+
+// Enum value maps for AlarmSeverity.
+var (
+	AlarmSeverity_name = map[int32]string{
+		0: "SEVERITY_INFO",
+		1: "SEVERITY_LOW",
+		2: "SEVERITY_MEDIUM",
+		3: "SEVERITY_HIGH",
+		4: "SEVERITY_CRITICAL",
+	}
+	AlarmSeverity_value = map[string]int32{
+		"SEVERITY_INFO":     0,
+		"SEVERITY_LOW":      1,
+		"SEVERITY_MEDIUM":   2,
+		"SEVERITY_HIGH":     3,
+		"SEVERITY_CRITICAL": 4,
+	}
+)
+
+func (x AlarmSeverity) Enum() *AlarmSeverity {
+	p := new(AlarmSeverity)
+	*p = x
+	return p
+}
+
+func (x AlarmSeverity) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AlarmSeverity) Descriptor() protoreflect.EnumDescriptor {
+	return file_v1_scada_gas_proto_enumTypes[1].Descriptor()
+}
+
+func (AlarmSeverity) Type() protoreflect.EnumType {
+	return &file_v1_scada_gas_proto_enumTypes[1]
+}
+
+func (x AlarmSeverity) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AlarmSeverity.Descriptor instead.
+func (AlarmSeverity) EnumDescriptor() ([]byte, []int) {
+	return file_v1_scada_gas_proto_rawDescGZIP(), []int{1}
+}
+
+// ISA-18.2 alarm states. An alarm that is acknowledged after returning to
+// normal (ALARM_ACK_RTN) is cleared from the active list.
+type AlarmState int32
+
+const (
+	AlarmState_ALARM_UNACK_ALARM AlarmState = 0 // active, not yet acknowledged
+	AlarmState_ALARM_ACK_ALARM   AlarmState = 1 // active, acknowledged
+	AlarmState_ALARM_UNACK_RTN   AlarmState = 2 // returned to normal, not yet acknowledged
+	AlarmState_ALARM_ACK_RTN     AlarmState = 3 // returned to normal and acknowledged (cleared)
+)
+
+// Enum value maps for AlarmState.
+var (
+	AlarmState_name = map[int32]string{
+		0: "ALARM_UNACK_ALARM",
+		1: "ALARM_ACK_ALARM",
+		2: "ALARM_UNACK_RTN",
+		3: "ALARM_ACK_RTN",
+	}
+	AlarmState_value = map[string]int32{
+		"ALARM_UNACK_ALARM": 0,
+		"ALARM_ACK_ALARM":   1,
+		"ALARM_UNACK_RTN":   2,
+		"ALARM_ACK_RTN":     3,
+	}
+)
+
+func (x AlarmState) Enum() *AlarmState {
+	p := new(AlarmState)
+	*p = x
+	return p
+}
+
+func (x AlarmState) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AlarmState) Descriptor() protoreflect.EnumDescriptor {
+	return file_v1_scada_gas_proto_enumTypes[2].Descriptor()
+}
+
+func (AlarmState) Type() protoreflect.EnumType {
+	return &file_v1_scada_gas_proto_enumTypes[2]
+}
+
+func (x AlarmState) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AlarmState.Descriptor instead.
+func (AlarmState) EnumDescriptor() ([]byte, []int) {
+	return file_v1_scada_gas_proto_rawDescGZIP(), []int{2}
+}
+
 // AnalogTagValue carries one scaled analog measurement.
 type AnalogTagValue struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
@@ -364,6 +473,374 @@ func (x *StreamAck) GetIsHealthy() bool {
 	return false
 }
 
+type AlarmEvent struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	AlarmId          string                 `protobuf:"bytes,1,opt,name=alarm_id,json=alarmId,proto3" json:"alarm_id,omitempty"` // e.g. TEH_CGS_01_P_IN_HH
+	TagId            string                 `protobuf:"bytes,2,opt,name=tag_id,json=tagId,proto3" json:"tag_id,omitempty"`
+	Severity         AlarmSeverity          `protobuf:"varint,3,opt,name=severity,proto3,enum=scada.v1.AlarmSeverity" json:"severity,omitempty"`
+	State            AlarmState             `protobuf:"varint,4,opt,name=state,proto3,enum=scada.v1.AlarmState" json:"state,omitempty"`
+	Message          string                 `protobuf:"bytes,5,opt,name=message,proto3" json:"message,omitempty"`
+	TriggerValue     float64                `protobuf:"fixed64,6,opt,name=trigger_value,json=triggerValue,proto3" json:"trigger_value,omitempty"`
+	TriggerTimeUtcMs int64                  `protobuf:"varint,7,opt,name=trigger_time_utc_ms,json=triggerTimeUtcMs,proto3" json:"trigger_time_utc_ms,omitempty"`
+	AckTimeUtcMs     int64                  `protobuf:"varint,8,opt,name=ack_time_utc_ms,json=ackTimeUtcMs,proto3" json:"ack_time_utc_ms,omitempty"`
+	AckByUser        string                 `protobuf:"bytes,9,opt,name=ack_by_user,json=ackByUser,proto3" json:"ack_by_user,omitempty"`
+	RtnTimeUtcMs     int64                  `protobuf:"varint,10,opt,name=rtn_time_utc_ms,json=rtnTimeUtcMs,proto3" json:"rtn_time_utc_ms,omitempty"` // when the process condition returned to normal
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *AlarmEvent) Reset() {
+	*x = AlarmEvent{}
+	mi := &file_v1_scada_gas_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AlarmEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AlarmEvent) ProtoMessage() {}
+
+func (x *AlarmEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_scada_gas_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AlarmEvent.ProtoReflect.Descriptor instead.
+func (*AlarmEvent) Descriptor() ([]byte, []int) {
+	return file_v1_scada_gas_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *AlarmEvent) GetAlarmId() string {
+	if x != nil {
+		return x.AlarmId
+	}
+	return ""
+}
+
+func (x *AlarmEvent) GetTagId() string {
+	if x != nil {
+		return x.TagId
+	}
+	return ""
+}
+
+func (x *AlarmEvent) GetSeverity() AlarmSeverity {
+	if x != nil {
+		return x.Severity
+	}
+	return AlarmSeverity_SEVERITY_INFO
+}
+
+func (x *AlarmEvent) GetState() AlarmState {
+	if x != nil {
+		return x.State
+	}
+	return AlarmState_ALARM_UNACK_ALARM
+}
+
+func (x *AlarmEvent) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *AlarmEvent) GetTriggerValue() float64 {
+	if x != nil {
+		return x.TriggerValue
+	}
+	return 0
+}
+
+func (x *AlarmEvent) GetTriggerTimeUtcMs() int64 {
+	if x != nil {
+		return x.TriggerTimeUtcMs
+	}
+	return 0
+}
+
+func (x *AlarmEvent) GetAckTimeUtcMs() int64 {
+	if x != nil {
+		return x.AckTimeUtcMs
+	}
+	return 0
+}
+
+func (x *AlarmEvent) GetAckByUser() string {
+	if x != nil {
+		return x.AckByUser
+	}
+	return ""
+}
+
+func (x *AlarmEvent) GetRtnTimeUtcMs() int64 {
+	if x != nil {
+		return x.RtnTimeUtcMs
+	}
+	return 0
+}
+
+type AckAlarmRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AlarmId       string                 `protobuf:"bytes,1,opt,name=alarm_id,json=alarmId,proto3" json:"alarm_id,omitempty"`
+	User          string                 `protobuf:"bytes,2,opt,name=user,proto3" json:"user,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AckAlarmRequest) Reset() {
+	*x = AckAlarmRequest{}
+	mi := &file_v1_scada_gas_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AckAlarmRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AckAlarmRequest) ProtoMessage() {}
+
+func (x *AckAlarmRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_scada_gas_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AckAlarmRequest.ProtoReflect.Descriptor instead.
+func (*AckAlarmRequest) Descriptor() ([]byte, []int) {
+	return file_v1_scada_gas_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *AckAlarmRequest) GetAlarmId() string {
+	if x != nil {
+		return x.AlarmId
+	}
+	return ""
+}
+
+func (x *AckAlarmRequest) GetUser() string {
+	if x != nil {
+		return x.User
+	}
+	return ""
+}
+
+type AckAlarmResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	Alarm         *AlarmEvent            `protobuf:"bytes,3,opt,name=alarm,proto3" json:"alarm,omitempty"` // alarm after the transition (set on success)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AckAlarmResponse) Reset() {
+	*x = AckAlarmResponse{}
+	mi := &file_v1_scada_gas_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AckAlarmResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AckAlarmResponse) ProtoMessage() {}
+
+func (x *AckAlarmResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_scada_gas_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AckAlarmResponse.ProtoReflect.Descriptor instead.
+func (*AckAlarmResponse) Descriptor() ([]byte, []int) {
+	return file_v1_scada_gas_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *AckAlarmResponse) GetSuccess() bool {
+	if x != nil {
+		return x.Success
+	}
+	return false
+}
+
+func (x *AckAlarmResponse) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *AckAlarmResponse) GetAlarm() *AlarmEvent {
+	if x != nil {
+		return x.Alarm
+	}
+	return nil
+}
+
+type GetActiveAlarmsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TagId         string                 `protobuf:"bytes,1,opt,name=tag_id,json=tagId,proto3" json:"tag_id,omitempty"`                                                // optional: only alarms of this tag
+	MinSeverity   AlarmSeverity          `protobuf:"varint,2,opt,name=min_severity,json=minSeverity,proto3,enum=scada.v1.AlarmSeverity" json:"min_severity,omitempty"` // only alarms at or above this severity
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetActiveAlarmsRequest) Reset() {
+	*x = GetActiveAlarmsRequest{}
+	mi := &file_v1_scada_gas_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetActiveAlarmsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetActiveAlarmsRequest) ProtoMessage() {}
+
+func (x *GetActiveAlarmsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_scada_gas_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetActiveAlarmsRequest.ProtoReflect.Descriptor instead.
+func (*GetActiveAlarmsRequest) Descriptor() ([]byte, []int) {
+	return file_v1_scada_gas_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *GetActiveAlarmsRequest) GetTagId() string {
+	if x != nil {
+		return x.TagId
+	}
+	return ""
+}
+
+func (x *GetActiveAlarmsRequest) GetMinSeverity() AlarmSeverity {
+	if x != nil {
+		return x.MinSeverity
+	}
+	return AlarmSeverity_SEVERITY_INFO
+}
+
+type GetActiveAlarmsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Alarms        []*AlarmEvent          `protobuf:"bytes,1,rep,name=alarms,proto3" json:"alarms,omitempty"` // sorted by severity, then trigger time
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetActiveAlarmsResponse) Reset() {
+	*x = GetActiveAlarmsResponse{}
+	mi := &file_v1_scada_gas_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetActiveAlarmsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetActiveAlarmsResponse) ProtoMessage() {}
+
+func (x *GetActiveAlarmsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_scada_gas_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetActiveAlarmsResponse.ProtoReflect.Descriptor instead.
+func (*GetActiveAlarmsResponse) Descriptor() ([]byte, []int) {
+	return file_v1_scada_gas_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *GetActiveAlarmsResponse) GetAlarms() []*AlarmEvent {
+	if x != nil {
+		return x.Alarms
+	}
+	return nil
+}
+
+type SubscribeRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SubscriberId  string                 `protobuf:"bytes,1,opt,name=subscriber_id,json=subscriberId,proto3" json:"subscriber_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SubscribeRequest) Reset() {
+	*x = SubscribeRequest{}
+	mi := &file_v1_scada_gas_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubscribeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubscribeRequest) ProtoMessage() {}
+
+func (x *SubscribeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_v1_scada_gas_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubscribeRequest.ProtoReflect.Descriptor instead.
+func (*SubscribeRequest) Descriptor() ([]byte, []int) {
+	return file_v1_scada_gas_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *SubscribeRequest) GetSubscriberId() string {
+	if x != nil {
+		return x.SubscriberId
+	}
+	return ""
+}
+
 var File_v1_scada_gas_proto protoreflect.FileDescriptor
 
 const file_v1_scada_gas_proto_rawDesc = "" +
@@ -390,16 +867,61 @@ const file_v1_scada_gas_proto_rawDesc = "" +
 	"\tStreamAck\x126\n" +
 	"\x17last_processed_sequence\x18\x01 \x01(\x03R\x15lastProcessedSequence\x12\x1d\n" +
 	"\n" +
-	"is_healthy\x18\x02 \x01(\bR\tisHealthy*\xab\x01\n" +
+	"is_healthy\x18\x02 \x01(\bR\tisHealthy\"\xfb\x02\n" +
+	"\n" +
+	"AlarmEvent\x12\x19\n" +
+	"\balarm_id\x18\x01 \x01(\tR\aalarmId\x12\x15\n" +
+	"\x06tag_id\x18\x02 \x01(\tR\x05tagId\x123\n" +
+	"\bseverity\x18\x03 \x01(\x0e2\x17.scada.v1.AlarmSeverityR\bseverity\x12*\n" +
+	"\x05state\x18\x04 \x01(\x0e2\x14.scada.v1.AlarmStateR\x05state\x12\x18\n" +
+	"\amessage\x18\x05 \x01(\tR\amessage\x12#\n" +
+	"\rtrigger_value\x18\x06 \x01(\x01R\ftriggerValue\x12-\n" +
+	"\x13trigger_time_utc_ms\x18\a \x01(\x03R\x10triggerTimeUtcMs\x12%\n" +
+	"\x0fack_time_utc_ms\x18\b \x01(\x03R\fackTimeUtcMs\x12\x1e\n" +
+	"\vack_by_user\x18\t \x01(\tR\tackByUser\x12%\n" +
+	"\x0frtn_time_utc_ms\x18\n" +
+	" \x01(\x03R\frtnTimeUtcMs\"@\n" +
+	"\x0fAckAlarmRequest\x12\x19\n" +
+	"\balarm_id\x18\x01 \x01(\tR\aalarmId\x12\x12\n" +
+	"\x04user\x18\x02 \x01(\tR\x04user\"r\n" +
+	"\x10AckAlarmResponse\x12\x18\n" +
+	"\asuccess\x18\x01 \x01(\bR\asuccess\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\x12*\n" +
+	"\x05alarm\x18\x03 \x01(\v2\x14.scada.v1.AlarmEventR\x05alarm\"k\n" +
+	"\x16GetActiveAlarmsRequest\x12\x15\n" +
+	"\x06tag_id\x18\x01 \x01(\tR\x05tagId\x12:\n" +
+	"\fmin_severity\x18\x02 \x01(\x0e2\x17.scada.v1.AlarmSeverityR\vminSeverity\"G\n" +
+	"\x17GetActiveAlarmsResponse\x12,\n" +
+	"\x06alarms\x18\x01 \x03(\v2\x14.scada.v1.AlarmEventR\x06alarms\"7\n" +
+	"\x10SubscribeRequest\x12#\n" +
+	"\rsubscriber_id\x18\x01 \x01(\tR\fsubscriberId*\xab\x01\n" +
 	"\vDataQuality\x12\x13\n" +
 	"\x0fQUALITY_UNKNOWN\x10\x00\x12\x10\n" +
 	"\fQUALITY_GOOD\x10\x01\x12\x1c\n" +
 	"\x18QUALITY_BAD_COMM_FAILURE\x10\x02\x12\x1c\n" +
 	"\x18QUALITY_BAD_SENSOR_FAULT\x10\x03\x12\x1c\n" +
 	"\x18QUALITY_BAD_OUT_OF_RANGE\x10\x04\x12\x1b\n" +
-	"\x17QUALITY_MANUAL_OVERRIDE\x10\x052`\n" +
+	"\x17QUALITY_MANUAL_OVERRIDE\x10\x05*s\n" +
+	"\rAlarmSeverity\x12\x11\n" +
+	"\rSEVERITY_INFO\x10\x00\x12\x10\n" +
+	"\fSEVERITY_LOW\x10\x01\x12\x13\n" +
+	"\x0fSEVERITY_MEDIUM\x10\x02\x12\x11\n" +
+	"\rSEVERITY_HIGH\x10\x03\x12\x15\n" +
+	"\x11SEVERITY_CRITICAL\x10\x04*`\n" +
+	"\n" +
+	"AlarmState\x12\x15\n" +
+	"\x11ALARM_UNACK_ALARM\x10\x00\x12\x13\n" +
+	"\x0fALARM_ACK_ALARM\x10\x01\x12\x13\n" +
+	"\x0fALARM_UNACK_RTN\x10\x02\x12\x11\n" +
+	"\rALARM_ACK_RTN\x10\x032`\n" +
 	"\x13ScadaFepCoreService\x12I\n" +
-	"\x0fStreamTelemetry\x12\x1f.scada.v1.TelemetryStreamUpdate\x1a\x13.scada.v1.StreamAck(\x01B3Z1github.com/example/scada-gas/gen/scada/v1;scadav1b\x06proto3"
+	"\x0fStreamTelemetry\x12\x1f.scada.v1.TelemetryStreamUpdate\x1a\x13.scada.v1.StreamAck(\x012\x82\x02\n" +
+	"\x11ScadaAlarmService\x12I\n" +
+	"\x10AcknowledgeAlarm\x12\x19.scada.v1.AckAlarmRequest\x1a\x1a.scada.v1.AckAlarmResponse\x12V\n" +
+	"\x0fGetActiveAlarms\x12 .scada.v1.GetActiveAlarmsRequest\x1a!.scada.v1.GetActiveAlarmsResponse\x12J\n" +
+	"\x14SubscribeAlarmEvents\x12\x1a.scada.v1.SubscribeRequest\x1a\x14.scada.v1.AlarmEvent0\x012g\n" +
+	"\x10ScadaDataService\x12S\n" +
+	"\x12SubscribeTelemetry\x12\x1a.scada.v1.SubscribeRequest\x1a\x1f.scada.v1.TelemetryStreamUpdate0\x01B3Z1github.com/example/scada-gas/gen/scada/v1;scadav1b\x06proto3"
 
 var (
 	file_v1_scada_gas_proto_rawDescOnce sync.Once
@@ -413,27 +935,48 @@ func file_v1_scada_gas_proto_rawDescGZIP() []byte {
 	return file_v1_scada_gas_proto_rawDescData
 }
 
-var file_v1_scada_gas_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_v1_scada_gas_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_v1_scada_gas_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_v1_scada_gas_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_v1_scada_gas_proto_goTypes = []any{
-	(DataQuality)(0),              // 0: scada.v1.DataQuality
-	(*AnalogTagValue)(nil),        // 1: scada.v1.AnalogTagValue
-	(*DigitalTagValue)(nil),       // 2: scada.v1.DigitalTagValue
-	(*TelemetryStreamUpdate)(nil), // 3: scada.v1.TelemetryStreamUpdate
-	(*StreamAck)(nil),             // 4: scada.v1.StreamAck
+	(DataQuality)(0),                // 0: scada.v1.DataQuality
+	(AlarmSeverity)(0),              // 1: scada.v1.AlarmSeverity
+	(AlarmState)(0),                 // 2: scada.v1.AlarmState
+	(*AnalogTagValue)(nil),          // 3: scada.v1.AnalogTagValue
+	(*DigitalTagValue)(nil),         // 4: scada.v1.DigitalTagValue
+	(*TelemetryStreamUpdate)(nil),   // 5: scada.v1.TelemetryStreamUpdate
+	(*StreamAck)(nil),               // 6: scada.v1.StreamAck
+	(*AlarmEvent)(nil),              // 7: scada.v1.AlarmEvent
+	(*AckAlarmRequest)(nil),         // 8: scada.v1.AckAlarmRequest
+	(*AckAlarmResponse)(nil),        // 9: scada.v1.AckAlarmResponse
+	(*GetActiveAlarmsRequest)(nil),  // 10: scada.v1.GetActiveAlarmsRequest
+	(*GetActiveAlarmsResponse)(nil), // 11: scada.v1.GetActiveAlarmsResponse
+	(*SubscribeRequest)(nil),        // 12: scada.v1.SubscribeRequest
 }
 var file_v1_scada_gas_proto_depIdxs = []int32{
-	0, // 0: scada.v1.AnalogTagValue.quality:type_name -> scada.v1.DataQuality
-	0, // 1: scada.v1.DigitalTagValue.quality:type_name -> scada.v1.DataQuality
-	1, // 2: scada.v1.TelemetryStreamUpdate.analog_updates:type_name -> scada.v1.AnalogTagValue
-	2, // 3: scada.v1.TelemetryStreamUpdate.digital_updates:type_name -> scada.v1.DigitalTagValue
-	3, // 4: scada.v1.ScadaFepCoreService.StreamTelemetry:input_type -> scada.v1.TelemetryStreamUpdate
-	4, // 5: scada.v1.ScadaFepCoreService.StreamTelemetry:output_type -> scada.v1.StreamAck
-	5, // [5:6] is the sub-list for method output_type
-	4, // [4:5] is the sub-list for method input_type
-	4, // [4:4] is the sub-list for extension type_name
-	4, // [4:4] is the sub-list for extension extendee
-	0, // [0:4] is the sub-list for field type_name
+	0,  // 0: scada.v1.AnalogTagValue.quality:type_name -> scada.v1.DataQuality
+	0,  // 1: scada.v1.DigitalTagValue.quality:type_name -> scada.v1.DataQuality
+	3,  // 2: scada.v1.TelemetryStreamUpdate.analog_updates:type_name -> scada.v1.AnalogTagValue
+	4,  // 3: scada.v1.TelemetryStreamUpdate.digital_updates:type_name -> scada.v1.DigitalTagValue
+	1,  // 4: scada.v1.AlarmEvent.severity:type_name -> scada.v1.AlarmSeverity
+	2,  // 5: scada.v1.AlarmEvent.state:type_name -> scada.v1.AlarmState
+	7,  // 6: scada.v1.AckAlarmResponse.alarm:type_name -> scada.v1.AlarmEvent
+	1,  // 7: scada.v1.GetActiveAlarmsRequest.min_severity:type_name -> scada.v1.AlarmSeverity
+	7,  // 8: scada.v1.GetActiveAlarmsResponse.alarms:type_name -> scada.v1.AlarmEvent
+	5,  // 9: scada.v1.ScadaFepCoreService.StreamTelemetry:input_type -> scada.v1.TelemetryStreamUpdate
+	8,  // 10: scada.v1.ScadaAlarmService.AcknowledgeAlarm:input_type -> scada.v1.AckAlarmRequest
+	10, // 11: scada.v1.ScadaAlarmService.GetActiveAlarms:input_type -> scada.v1.GetActiveAlarmsRequest
+	12, // 12: scada.v1.ScadaAlarmService.SubscribeAlarmEvents:input_type -> scada.v1.SubscribeRequest
+	12, // 13: scada.v1.ScadaDataService.SubscribeTelemetry:input_type -> scada.v1.SubscribeRequest
+	6,  // 14: scada.v1.ScadaFepCoreService.StreamTelemetry:output_type -> scada.v1.StreamAck
+	9,  // 15: scada.v1.ScadaAlarmService.AcknowledgeAlarm:output_type -> scada.v1.AckAlarmResponse
+	11, // 16: scada.v1.ScadaAlarmService.GetActiveAlarms:output_type -> scada.v1.GetActiveAlarmsResponse
+	7,  // 17: scada.v1.ScadaAlarmService.SubscribeAlarmEvents:output_type -> scada.v1.AlarmEvent
+	5,  // 18: scada.v1.ScadaDataService.SubscribeTelemetry:output_type -> scada.v1.TelemetryStreamUpdate
+	14, // [14:19] is the sub-list for method output_type
+	9,  // [9:14] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_v1_scada_gas_proto_init() }
@@ -446,10 +989,10 @@ func file_v1_scada_gas_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_v1_scada_gas_proto_rawDesc), len(file_v1_scada_gas_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   4,
+			NumEnums:      3,
+			NumMessages:   10,
 			NumExtensions: 0,
-			NumServices:   1,
+			NumServices:   3,
 		},
 		GoTypes:           file_v1_scada_gas_proto_goTypes,
 		DependencyIndexes: file_v1_scada_gas_proto_depIdxs,

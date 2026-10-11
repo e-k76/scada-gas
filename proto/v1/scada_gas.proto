@@ -50,3 +50,73 @@ message StreamAck {
 service ScadaFepCoreService {
   rpc StreamTelemetry(stream TelemetryStreamUpdate) returns (StreamAck);
 }
+
+// ---------------------------------------------------------------------------
+// Phase 2: alarm management (ISA-18.2 / IEC 62682) and data distribution
+// ---------------------------------------------------------------------------
+
+enum AlarmSeverity {
+  SEVERITY_INFO = 0;
+  SEVERITY_LOW = 1;
+  SEVERITY_MEDIUM = 2;
+  SEVERITY_HIGH = 3;
+  SEVERITY_CRITICAL = 4;
+}
+
+// ISA-18.2 alarm states. An alarm that is acknowledged after returning to
+// normal (ALARM_ACK_RTN) is cleared from the active list.
+enum AlarmState {
+  ALARM_UNACK_ALARM = 0;  // active, not yet acknowledged
+  ALARM_ACK_ALARM = 1;    // active, acknowledged
+  ALARM_UNACK_RTN = 2;    // returned to normal, not yet acknowledged
+  ALARM_ACK_RTN = 3;      // returned to normal and acknowledged (cleared)
+}
+
+message AlarmEvent {
+  string alarm_id = 1;  // e.g. TEH_CGS_01_P_IN_HH
+  string tag_id = 2;
+  AlarmSeverity severity = 3;
+  AlarmState state = 4;
+  string message = 5;
+  double trigger_value = 6;
+  int64 trigger_time_utc_ms = 7;
+  int64 ack_time_utc_ms = 8;
+  string ack_by_user = 9;
+  int64 rtn_time_utc_ms = 10;  // when the process condition returned to normal
+}
+
+message AckAlarmRequest {
+  string alarm_id = 1;
+  string user = 2;
+}
+
+message AckAlarmResponse {
+  bool success = 1;
+  string message = 2;
+  AlarmEvent alarm = 3;  // alarm after the transition (set on success)
+}
+
+message GetActiveAlarmsRequest {
+  string tag_id = 1;                  // optional: only alarms of this tag
+  AlarmSeverity min_severity = 2;     // only alarms at or above this severity
+}
+
+message GetActiveAlarmsResponse {
+  repeated AlarmEvent alarms = 1;     // sorted by severity, then trigger time
+}
+
+message SubscribeRequest {
+  string subscriber_id = 1;
+}
+
+service ScadaAlarmService {
+  rpc AcknowledgeAlarm(AckAlarmRequest) returns (AckAlarmResponse);
+  rpc GetActiveAlarms(GetActiveAlarmsRequest) returns (GetActiveAlarmsResponse);
+  // Live feed of every alarm state transition (used by the historian).
+  rpc SubscribeAlarmEvents(SubscribeRequest) returns (stream AlarmEvent);
+}
+
+service ScadaDataService {
+  // Live feed of every telemetry batch the core ingests (used by the historian).
+  rpc SubscribeTelemetry(SubscribeRequest) returns (stream TelemetryStreamUpdate);
+}

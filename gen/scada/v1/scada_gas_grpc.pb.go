@@ -112,3 +112,294 @@ var ScadaFepCoreService_ServiceDesc = grpc.ServiceDesc{
 	},
 	Metadata: "v1/scada_gas.proto",
 }
+
+const (
+	ScadaAlarmService_AcknowledgeAlarm_FullMethodName     = "/scada.v1.ScadaAlarmService/AcknowledgeAlarm"
+	ScadaAlarmService_GetActiveAlarms_FullMethodName      = "/scada.v1.ScadaAlarmService/GetActiveAlarms"
+	ScadaAlarmService_SubscribeAlarmEvents_FullMethodName = "/scada.v1.ScadaAlarmService/SubscribeAlarmEvents"
+)
+
+// ScadaAlarmServiceClient is the client API for ScadaAlarmService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type ScadaAlarmServiceClient interface {
+	AcknowledgeAlarm(ctx context.Context, in *AckAlarmRequest, opts ...grpc.CallOption) (*AckAlarmResponse, error)
+	GetActiveAlarms(ctx context.Context, in *GetActiveAlarmsRequest, opts ...grpc.CallOption) (*GetActiveAlarmsResponse, error)
+	// Live feed of every alarm state transition (used by the historian).
+	SubscribeAlarmEvents(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[AlarmEvent], error)
+}
+
+type scadaAlarmServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewScadaAlarmServiceClient(cc grpc.ClientConnInterface) ScadaAlarmServiceClient {
+	return &scadaAlarmServiceClient{cc}
+}
+
+func (c *scadaAlarmServiceClient) AcknowledgeAlarm(ctx context.Context, in *AckAlarmRequest, opts ...grpc.CallOption) (*AckAlarmResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AckAlarmResponse)
+	err := c.cc.Invoke(ctx, ScadaAlarmService_AcknowledgeAlarm_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *scadaAlarmServiceClient) GetActiveAlarms(ctx context.Context, in *GetActiveAlarmsRequest, opts ...grpc.CallOption) (*GetActiveAlarmsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetActiveAlarmsResponse)
+	err := c.cc.Invoke(ctx, ScadaAlarmService_GetActiveAlarms_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *scadaAlarmServiceClient) SubscribeAlarmEvents(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[AlarmEvent], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &ScadaAlarmService_ServiceDesc.Streams[0], ScadaAlarmService_SubscribeAlarmEvents_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[SubscribeRequest, AlarmEvent]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type ScadaAlarmService_SubscribeAlarmEventsClient = grpc.ServerStreamingClient[AlarmEvent]
+
+// ScadaAlarmServiceServer is the server API for ScadaAlarmService service.
+// All implementations must embed UnimplementedScadaAlarmServiceServer
+// for forward compatibility.
+type ScadaAlarmServiceServer interface {
+	AcknowledgeAlarm(context.Context, *AckAlarmRequest) (*AckAlarmResponse, error)
+	GetActiveAlarms(context.Context, *GetActiveAlarmsRequest) (*GetActiveAlarmsResponse, error)
+	// Live feed of every alarm state transition (used by the historian).
+	SubscribeAlarmEvents(*SubscribeRequest, grpc.ServerStreamingServer[AlarmEvent]) error
+	mustEmbedUnimplementedScadaAlarmServiceServer()
+}
+
+// UnimplementedScadaAlarmServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedScadaAlarmServiceServer struct{}
+
+func (UnimplementedScadaAlarmServiceServer) AcknowledgeAlarm(context.Context, *AckAlarmRequest) (*AckAlarmResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AcknowledgeAlarm not implemented")
+}
+func (UnimplementedScadaAlarmServiceServer) GetActiveAlarms(context.Context, *GetActiveAlarmsRequest) (*GetActiveAlarmsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetActiveAlarms not implemented")
+}
+func (UnimplementedScadaAlarmServiceServer) SubscribeAlarmEvents(*SubscribeRequest, grpc.ServerStreamingServer[AlarmEvent]) error {
+	return status.Error(codes.Unimplemented, "method SubscribeAlarmEvents not implemented")
+}
+func (UnimplementedScadaAlarmServiceServer) mustEmbedUnimplementedScadaAlarmServiceServer() {}
+func (UnimplementedScadaAlarmServiceServer) testEmbeddedByValue()                           {}
+
+// UnsafeScadaAlarmServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ScadaAlarmServiceServer will
+// result in compilation errors.
+type UnsafeScadaAlarmServiceServer interface {
+	mustEmbedUnimplementedScadaAlarmServiceServer()
+}
+
+func RegisterScadaAlarmServiceServer(s grpc.ServiceRegistrar, srv ScadaAlarmServiceServer) {
+	// If the following call panics, it indicates UnimplementedScadaAlarmServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&ScadaAlarmService_ServiceDesc, srv)
+}
+
+func _ScadaAlarmService_AcknowledgeAlarm_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AckAlarmRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ScadaAlarmServiceServer).AcknowledgeAlarm(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ScadaAlarmService_AcknowledgeAlarm_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ScadaAlarmServiceServer).AcknowledgeAlarm(ctx, req.(*AckAlarmRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ScadaAlarmService_GetActiveAlarms_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetActiveAlarmsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ScadaAlarmServiceServer).GetActiveAlarms(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ScadaAlarmService_GetActiveAlarms_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ScadaAlarmServiceServer).GetActiveAlarms(ctx, req.(*GetActiveAlarmsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ScadaAlarmService_SubscribeAlarmEvents_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(SubscribeRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ScadaAlarmServiceServer).SubscribeAlarmEvents(m, &grpc.GenericServerStream[SubscribeRequest, AlarmEvent]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type ScadaAlarmService_SubscribeAlarmEventsServer = grpc.ServerStreamingServer[AlarmEvent]
+
+// ScadaAlarmService_ServiceDesc is the grpc.ServiceDesc for ScadaAlarmService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var ScadaAlarmService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "scada.v1.ScadaAlarmService",
+	HandlerType: (*ScadaAlarmServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "AcknowledgeAlarm",
+			Handler:    _ScadaAlarmService_AcknowledgeAlarm_Handler,
+		},
+		{
+			MethodName: "GetActiveAlarms",
+			Handler:    _ScadaAlarmService_GetActiveAlarms_Handler,
+		},
+	},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "SubscribeAlarmEvents",
+			Handler:       _ScadaAlarmService_SubscribeAlarmEvents_Handler,
+			ServerStreams: true,
+		},
+	},
+	Metadata: "v1/scada_gas.proto",
+}
+
+const (
+	ScadaDataService_SubscribeTelemetry_FullMethodName = "/scada.v1.ScadaDataService/SubscribeTelemetry"
+)
+
+// ScadaDataServiceClient is the client API for ScadaDataService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type ScadaDataServiceClient interface {
+	// Live feed of every telemetry batch the core ingests (used by the historian).
+	SubscribeTelemetry(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[TelemetryStreamUpdate], error)
+}
+
+type scadaDataServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewScadaDataServiceClient(cc grpc.ClientConnInterface) ScadaDataServiceClient {
+	return &scadaDataServiceClient{cc}
+}
+
+func (c *scadaDataServiceClient) SubscribeTelemetry(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[TelemetryStreamUpdate], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &ScadaDataService_ServiceDesc.Streams[0], ScadaDataService_SubscribeTelemetry_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[SubscribeRequest, TelemetryStreamUpdate]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type ScadaDataService_SubscribeTelemetryClient = grpc.ServerStreamingClient[TelemetryStreamUpdate]
+
+// ScadaDataServiceServer is the server API for ScadaDataService service.
+// All implementations must embed UnimplementedScadaDataServiceServer
+// for forward compatibility.
+type ScadaDataServiceServer interface {
+	// Live feed of every telemetry batch the core ingests (used by the historian).
+	SubscribeTelemetry(*SubscribeRequest, grpc.ServerStreamingServer[TelemetryStreamUpdate]) error
+	mustEmbedUnimplementedScadaDataServiceServer()
+}
+
+// UnimplementedScadaDataServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedScadaDataServiceServer struct{}
+
+func (UnimplementedScadaDataServiceServer) SubscribeTelemetry(*SubscribeRequest, grpc.ServerStreamingServer[TelemetryStreamUpdate]) error {
+	return status.Error(codes.Unimplemented, "method SubscribeTelemetry not implemented")
+}
+func (UnimplementedScadaDataServiceServer) mustEmbedUnimplementedScadaDataServiceServer() {}
+func (UnimplementedScadaDataServiceServer) testEmbeddedByValue()                          {}
+
+// UnsafeScadaDataServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ScadaDataServiceServer will
+// result in compilation errors.
+type UnsafeScadaDataServiceServer interface {
+	mustEmbedUnimplementedScadaDataServiceServer()
+}
+
+func RegisterScadaDataServiceServer(s grpc.ServiceRegistrar, srv ScadaDataServiceServer) {
+	// If the following call panics, it indicates UnimplementedScadaDataServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&ScadaDataService_ServiceDesc, srv)
+}
+
+func _ScadaDataService_SubscribeTelemetry_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(SubscribeRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ScadaDataServiceServer).SubscribeTelemetry(m, &grpc.GenericServerStream[SubscribeRequest, TelemetryStreamUpdate]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type ScadaDataService_SubscribeTelemetryServer = grpc.ServerStreamingServer[TelemetryStreamUpdate]
+
+// ScadaDataService_ServiceDesc is the grpc.ServiceDesc for ScadaDataService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var ScadaDataService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "scada.v1.ScadaDataService",
+	HandlerType: (*ScadaDataServiceServer)(nil),
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "SubscribeTelemetry",
+			Handler:       _ScadaDataService_SubscribeTelemetry_Handler,
+			ServerStreams: true,
+		},
+	},
+	Metadata: "v1/scada_gas.proto",
+}
